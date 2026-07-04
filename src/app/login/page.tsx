@@ -112,7 +112,17 @@ export default function LoginPage() {
             Dev shortcut only — real OTP sign-in will replace this before launch.
           </p>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              {error}
+              {error.includes("Dev login is off") && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  On Vercel → Settings → Environment Variables → add{" "}
+                  <code className="text-foreground">OTP_DEV_MODE=true</code> then redeploy.
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

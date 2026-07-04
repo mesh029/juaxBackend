@@ -12,7 +12,7 @@ import { signAccessToken } from "@/lib/auth/jwt";
 import type { user_role } from "@prisma/client";
 import { userProfileSelect } from "@/lib/users/profile";
 import { devAccountForRole, type DevLoginRole } from "@/lib/auth/dev-accounts";
-import { isOtpDevMode } from "@/lib/auth/otp-response";
+import { isDevLoginEnabled } from "@/lib/auth/otp-response";
 
 export type AuthUser = {
   id: string;
@@ -225,8 +225,11 @@ export async function getUserById(id: string): Promise<AuthUser | null> {
 export async function devLoginByRole(
   role: DevLoginRole,
 ): Promise<{ token: string; user: AuthUser }> {
-  if (!isOtpDevMode()) {
-    throw new OtpError("forbidden", "Dev login is disabled in production");
+  if (!isDevLoginEnabled()) {
+    throw new OtpError(
+      "forbidden",
+      "Dev login is off. Set OTP_DEV_MODE=true or DEV_LOGIN_ENABLED=true on Vercel.",
+    );
   }
 
   const account = devAccountForRole(role);
