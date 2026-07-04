@@ -11,6 +11,8 @@ import { normalizeKenyaPhone } from "@/lib/auth/phone";
 import { signAccessToken } from "@/lib/auth/jwt";
 import type { user_role } from "@prisma/client";
 import { userProfileSelect } from "@/lib/users/profile";
+import { devAccountForRole, type DevLoginRole } from "@/lib/auth/dev-accounts";
+import { isOtpDevMode } from "@/lib/auth/otp-response";
 
 export type AuthUser = {
   id: string;
@@ -24,6 +26,16 @@ export type AuthUser = {
   created_at: Date;
   last_login_at: Date | null;
 };
+
+export async function isPhoneRegistered(rawPhone: string): Promise<boolean> {
+  const phone = normalizeKenyaPhone(rawPhone);
+  if (!phone) return false;
+  const user = await prisma.user.findUnique({
+    where: { phoneE164: phone },
+    select: { id: true },
+  });
+  return !!user;
+}
 
 export async function sendOtp(rawPhone: string): Promise<{ devCode?: string }> {
   const phone = normalizeKenyaPhone(rawPhone);
@@ -59,11 +71,20 @@ export async function sendOtp(rawPhone: string): Promise<{ devCode?: string }> {
   return {};
 }
 
+export type VerifyOtpOptions = {
+  /** Sign up — name required when creating a new account */
+  requireName?: boolean;
+  /** Sign in — reject phones with no existing account */
+  existingOnly?: boolean;
+  /** Sign up — reject phones that already have an account */
+  rejectExisting?: boolean;
+};
+
 export async function verifyOtp(
   rawPhone: string,
   code: string,
   displayName?: string,
-  opts?: { requireName?: boolean },
+  opts?: VerifyOtpOptions,
 ): Promise<{ token: string; user: AuthUser; isNewUser: boolean }> {
   const phone = normalizeKenyaPhone(rawPhone);
   if (!phone) {
@@ -102,11 +123,25 @@ export async function verifyOtp(
   });
   const isNewUser = !existing;
 
+  if (opts?.existingOnly && isNewUser) {
+    throw new OtpError(
+      "account_not_found",
+      "No account for this number. Sign up first or check the phone you entered.",
+    );
+  }
+
+  if (opts?.rejectExisting && !isNewUser) {
+    throw new OtpError(
+      "account_exists",
+      "This number is already registered. Sign in instead.",
+    );
+  }
+
   if (opts?.requireName && isNewUser && !displayName?.trim()) {
     throw new OtpError("name_required", "Display name is required for sign up");
   }
 
-  const user = await findOrCreateUser(phone, displayName);
+  const user = await findOrCreateUser(phone, displayName, isNewUser);
   const token = await signAccessToken({
     sub: user.id,
     role: user.role,
@@ -116,7 +151,11 @@ export async function verifyOtp(
   return { token, user, isNewUser };
 }
 
-async function findOrCreateUser(phone: string, displayName?: string): Promise<AuthUser> {
+async function findOrCreateUser(
+  phone: string,
+  displayName?: string,
+  isNewUser = false,
+): Promise<AuthUser> {
   const now = new Date();
   const existing = await prisma.user.findUnique({
     where: { phoneE164: phone },
@@ -132,6 +171,10 @@ async function findOrCreateUser(phone: string, displayName?: string): Promise<Au
       select: userProfileSelect,
     });
     return toAuthUser(updated);
+  }
+
+  if (!isNewUser) {
+    throw new OtpError("account_not_found", "Account not found");
   }
 
   const created = await prisma.user.create({
@@ -176,6 +219,47 @@ export async function getUserById(id: string): Promise<AuthUser | null> {
     select: userProfileSelect,
   });
   return user ? toAuthUser(user) : null;
+}
+
+/** One-click sign-in for seeded dev accounts (disabled when OTP_DEV_MODE is off). */
+export async function devLoginByRole(
+  role: DevLoginRole,
+): Promise<{ token: string; user: AuthUser }> {
+  if (!isOtpDevMode()) {
+    throw new OtpError("forbidden", "Dev login is disabled in production");
+  }
+
+  const account = devAccountForRole(role);
+  if (!account) {
+    throw new OtpError("invalid_role", "Unknown dev role");
+  }
+
+  const existing = await prisma.user.findUnique({
+    where: { phoneE164: account.phone },
+    select: userProfileSelect,
+  });
+
+  if (!existing) {
+    throw new OtpError(
+      "account_not_found",
+      `No seeded user for ${account.label}. Run npm run seed.`,
+    );
+  }
+
+  const user = await prisma.user.update({
+    where: { id: existing.id },
+    data: { lastLoginAt: new Date() },
+    select: userProfileSelect,
+  });
+
+  const authUser = toAuthUser(user);
+  const token = await signAccessToken({
+    sub: authUser.id,
+    role: authUser.role,
+    phone: authUser.phone_e164,
+  });
+
+  return { token, user: authUser };
 }
 
 function toAuthUser(user: {

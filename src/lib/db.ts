@@ -32,9 +32,8 @@ export const prisma =
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+// Reuse client across hot reload (dev) and serverless invocations (Vercel).
+globalForPrisma.prisma = prisma;
 
 export async function checkDbConnection(): Promise<void> {
   await prisma.$queryRaw`SELECT 1`;

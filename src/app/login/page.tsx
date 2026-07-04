@@ -1,119 +1,117 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles } from "lucide-react";
+import { Shield, Sparkles, User, UserCog } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { DEV_ACCOUNTS, type DevLoginRole } from "@/lib/auth/dev-accounts";
+import { ApiError } from "@/lib/api/errors";
+
+const ROLE_ICONS = {
+  admin: Shield,
+  agent: UserCog,
+  user: User,
+} as const;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, sendOtp, user } = useAuth();
-  const [phone, setPhone] = useState("700000001");
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [devCode, setDevCode] = useState<string | null>(null);
-  const [step, setStep] = useState<"phone" | "code">("phone");
+  const { devLogin, user } = useAuth();
+  const [role, setRole] = useState<DevLoginRole>("admin");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (user) {
-    router.replace("/");
-    return null;
-  }
+  useEffect(() => {
+    if (user) router.replace("/");
+  }, [user, router]);
 
-  async function handleSendOtp() {
+  if (user) return null;
+
+  async function handleSignIn() {
     setLoading(true);
     setError(null);
     try {
-      const otp = await sendOtp(phone);
-      if (otp) {
-        setDevCode(otp);
-        setCode(otp);
-      }
-      setStep("code");
+      await devLogin(role);
+      router.push(
+        role === "admin" ? "/admin" : role === "agent" ? "/admin/listings" : "/",
+      );
     } catch (e) {
-      setError(String(e));
+      setError(e instanceof ApiError ? e.message : String(e));
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleVerify() {
-    setLoading(true);
-    setError(null);
-    try {
-      await login(phone, code, name || undefined);
-      router.push("/");
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setLoading(false);
-    }
-  }
+  const selected = DEV_ACCOUNTS.find((a) => a.role === role)!;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md border-primary/20 shadow-lg">
+      <Card className="w-full max-w-lg border-primary/20 shadow-lg">
         <CardHeader className="text-center">
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Sparkles className="h-6 w-6" />
           </div>
           <CardTitle>Sign in to Jua X</CardTitle>
-          <CardDescription>+254 phone OTP — same flow as the mobile app</CardDescription>
+          <CardDescription>
+            Pick a role and sign in with one click. Phone OTP comes later.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {step === "phone" ? (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone (9 digits)</Label>
-                <Input
-                  id="phone"
-                  placeholder="712345678"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Dev: <code>700000001</code> admin · <code>700000002</code> agent
-                </p>
-              </div>
-              <Button className="w-full" onClick={handleSendOtp} disabled={loading}>
-                Send OTP
-              </Button>
-            </>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="code">6-digit code</Label>
-                <Input
-                  id="code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  maxLength={6}
-                  className="font-mono tracking-widest"
-                />
-                {devCode && (
-                  <Badge variant="outline" className="font-mono">
-                    Dev OTP: {devCode}
-                  </Badge>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="name">Display name (optional)</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-              <Button className="w-full" onClick={handleVerify} disabled={loading}>
-                Verify & continue
-              </Button>
-              <Button variant="ghost" className="w-full" onClick={() => setStep("phone")}>
-                Change number
-              </Button>
-            </>
-          )}
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">Sign in as</p>
+            <div className="grid gap-2">
+              {DEV_ACCOUNTS.map((account) => {
+                const Icon = ROLE_ICONS[account.role];
+                const active = role === account.role;
+                return (
+                  <button
+                    key={account.role}
+                    type="button"
+                    onClick={() => setRole(account.role)}
+                    className={cn(
+                      "flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+                      active
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "border-border hover:border-primary/40 hover:bg-muted/50",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
+                        active ? "bg-primary text-primary-foreground" : "bg-muted",
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{account.label}</span>
+                        <Badge variant="secondary" className="text-[10px] capitalize">
+                          {account.role}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{account.description}</p>
+                      <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                        +254 {account.phoneShort}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <Button className="w-full" size="lg" onClick={handleSignIn} disabled={loading}>
+            {loading ? "Signing in…" : `Sign in as ${selected.label}`}
+          </Button>
+
+          <p className="text-center text-xs text-muted-foreground">
+            Dev shortcut only — real OTP sign-in will replace this before launch.
+          </p>
+
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
       </Card>

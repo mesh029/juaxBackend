@@ -31,6 +31,8 @@ export type ListingFormState = {
   hostWhatsapp: string;
   publish: boolean;
   amenities: string[];
+  coverImageUrl: string;
+  galleryUrlsText: string;
 };
 
 export const INITIAL_LISTING_FORM: ListingFormState = {
@@ -53,6 +55,8 @@ export const INITIAL_LISTING_FORM: ListingFormState = {
   hostWhatsapp: "",
   publish: true,
   amenities: [],
+  coverImageUrl: "",
+  galleryUrlsText: "",
   ...KISUMU_DEFAULT,
 };
 
@@ -81,10 +85,24 @@ export function listingToForm(listing: AdminListing): ListingFormState {
     hostWhatsapp: listing.hostWhatsapp ?? "",
     publish: listing.status === "published",
     amenities: listing.amenities ?? [],
+    coverImageUrl: listing.coverImageUrl ?? "",
+    galleryUrlsText: (listing.imageUrls ?? [])
+      .filter((u) => u !== listing.coverImageUrl)
+      .join("\n"),
   };
 }
 
+export function parseGalleryUrls(text: string): string[] {
+  return [...new Set(text.split("\n").map((l) => l.trim()).filter(Boolean))];
+}
+
 export function formToPayload(form: ListingFormState) {
+  const gallery = parseGalleryUrls(form.galleryUrlsText);
+  const cover = form.coverImageUrl.trim() || gallery[0] || undefined;
+  const imageUrls = cover
+    ? [cover, ...gallery.filter((u) => u !== cover)]
+    : gallery;
+
   return {
     type: form.type,
     title: form.title,
@@ -108,6 +126,8 @@ export function formToPayload(form: ListingFormState) {
     hostPhone: form.hostPhone,
     hostWhatsapp: form.hostWhatsapp || undefined,
     amenities: form.amenities,
+    coverImageUrl: cover,
+    imageUrls,
     publish: form.publish,
   };
 }

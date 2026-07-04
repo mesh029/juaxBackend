@@ -18,13 +18,25 @@ import {
   setStoredAuth,
 } from "@/lib/api/client";
 
+type OtpSendResult = {
+  devCode?: string;
+  devMode: boolean;
+};
+
 type AuthContextValue = {
   user: ApiUser | null;
   token: string | null;
   loading: boolean;
-  login: (phone: string, code: string, name?: string) => Promise<void>;
-  sendOtp: (phone: string) => Promise<string | undefined>;
+  login: (
+    phone: string,
+    code: string,
+    mode: "signin" | "signup",
+    opts?: { name?: string; county?: string },
+  ) => Promise<void>;
+  sendOtp: (phone: string, mode: "signin" | "signup") => Promise<OtpSendResult>;
+  devLogin: (role: "admin" | "agent" | "user") => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isAdmin: boolean;
   isAgent: boolean;
 };
@@ -35,6 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<ApiUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const refreshUser = useCallback(async () => {
+    const storedToken = getStoredToken();
+    if (!storedToken) return;
+    const res = await api.me(storedToken);
+    setUser(res.user);
+    setStoredAuth(storedToken, res.user);
+  }, []);
 
   useEffect(() => {
     const storedToken = getStoredToken();
@@ -51,13 +71,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  const sendOtp = useCallback(async (phone: string) => {
-    const res = await api.sendOtp(phone);
-    return res.devCode;
+  const sendOtp = useCallback(async (phone: string, mode: "signin" | "signup") => {
+    const res =
+      mode === "signup" ? await api.signUpSend(phone) : await api.signInSend(phone);
+    return {
+      devCode: res.devCode,
+      devMode: res.devMode ?? !!res.devCode,
+    };
   }, []);
 
-  const login = useCallback(async (phone: string, code: string, name?: string) => {
-    const res = await api.verifyOtp(phone, code, name);
+  const login = useCallback(
+    async (
+      phone: string,
+      code: string,
+      mode: "signin" | "signup",
+      opts?: { name?: string; county?: string },
+    ) => {
+      const res =
+        mode === "signup"
+          ? await api.signUpVerify(phone, code, opts?.name ?? "", opts?.county)
+          : await api.signInVerify(phone, code, opts?.name);
+      setStoredAuth(res.token, res.user);
+      setToken(res.token);
+      setUser(res.user);
+    },
+    [],
+  );
+
+  const devLogin = useCallback(async (role: "admin" | "agent" | "user") => {
+    const res = await api.devLogin(role);
     setStoredAuth(res.token, res.user);
     setToken(res.token);
     setUser(res.user);
@@ -76,11 +118,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       login,
       sendOtp,
+      devLogin,
       logout,
+      refreshUser,
       isAdmin: user?.role === "admin",
       isAgent: user?.role === "agent" || user?.role === "admin",
     }),
-    [user, token, loading, login, sendOtp, logout],
+    [user, token, loading, login, sendOtp, devLogin, logout, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

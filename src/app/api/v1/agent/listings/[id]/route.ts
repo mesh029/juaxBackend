@@ -2,16 +2,16 @@ import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth/require-auth";
 import { jsonWithCors, optionsResponse } from "@/lib/cors";
 import { handleRouteError } from "@/lib/api/route-helpers";
-import { adminListingPatchSchema } from "@/lib/listings/admin-schemas";
+import { agentListingPatchSchema } from "@/lib/listings/admin-schemas";
 import { adminListingSelect, listingPatchData, toAdminListingDto } from "@/lib/listings/admin-dto";
 
 type Params = { params: { id: string } };
 
 export async function GET(request: Request, { params }: Params) {
   try {
-    await requireRole(request, ["admin"]);
-    const listing = await prisma.listing.findUnique({
-      where: { id: params.id },
+    const { user } = await requireRole(request, ["agent", "admin"]);
+    const listing = await prisma.listing.findFirst({
+      where: { id: params.id, agentId: user.id },
       select: adminListingSelect,
     });
     if (!listing) {
@@ -27,10 +27,12 @@ export async function GET(request: Request, { params }: Params) {
 
 export async function PATCH(request: Request, { params }: Params) {
   try {
-    await requireRole(request, ["admin"]);
-    const body = adminListingPatchSchema.parse(await request.json());
+    const { user } = await requireRole(request, ["agent", "admin"]);
+    const body = agentListingPatchSchema.parse(await request.json());
 
-    const existing = await prisma.listing.findUnique({ where: { id: params.id } });
+    const existing = await prisma.listing.findFirst({
+      where: { id: params.id, agentId: user.id },
+    });
     if (!existing) {
       return jsonWithCors({ error: "not_found", message: "Listing not found" }, request, {
         status: 404,

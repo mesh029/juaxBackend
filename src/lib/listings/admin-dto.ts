@@ -1,4 +1,8 @@
 import type { AdminListing } from "@/lib/api/types";
+import type { listingBodySchema } from "@/lib/listings/admin-schemas";
+import type { z } from "zod";
+
+export type ListingBody = z.infer<typeof listingBodySchema>;
 
 type AdminListingRow = {
   id: string;
@@ -11,6 +15,8 @@ type AdminListingRow = {
   priceKes: number;
   priceUnit: string;
   cleaningFeeKes: number;
+  coverImageUrl: string | null;
+  imageUrls: string[];
   beds: number;
   baths: number;
   sqm: number | null;
@@ -41,6 +47,8 @@ export function toAdminListingDto(row: AdminListingRow): AdminListing {
     priceKes: row.priceKes,
     priceUnit: row.priceUnit,
     cleaningFeeKes: row.cleaningFeeKes,
+    coverImageUrl: row.coverImageUrl,
+    imageUrls: row.imageUrls,
     beds: row.beds,
     baths: row.baths,
     sqm: row.sqm,
@@ -68,6 +76,8 @@ export const adminListingSelect = {
   priceKes: true,
   priceUnit: true,
   cleaningFeeKes: true,
+  coverImageUrl: true,
+  imageUrls: true,
   beds: true,
   baths: true,
   sqm: true,
@@ -84,3 +94,68 @@ export const adminListingSelect = {
   hostWhatsapp: true,
   createdAt: true,
 } as const;
+
+export function listingCreateData(agentId: string, body: ListingBody) {
+  return {
+    agentId,
+    type: body.type,
+    status: body.publish ? ("published" as const) : ("draft" as const),
+    title: body.title,
+    description: body.description,
+    neighborhood: body.neighborhood,
+    county: body.county,
+    beds: body.beds,
+    baths: body.baths,
+    sqm: body.sqm,
+    furnished: body.furnished,
+    amenities: body.amenities,
+    coverImageUrl: body.coverImageUrl ?? body.imageUrls[0] ?? null,
+    imageUrls: body.imageUrls,
+    priceKes: body.priceKes,
+    priceUnit: body.priceUnit,
+    cleaningFeeKes: body.cleaningFeeKes,
+    approxLat: body.approxLat,
+    approxLng: body.approxLng,
+    exactAddress: body.exactAddress,
+    exactLat: body.exactLat,
+    exactLng: body.exactLng,
+    hostName: body.hostName,
+    hostPhone: body.hostPhone,
+    hostWhatsapp: body.hostWhatsapp,
+    vacant: body.vacant,
+  };
+}
+
+export function listingPatchData(body: Partial<ListingBody>) {
+  return {
+    ...(body.type !== undefined && { type: body.type }),
+    ...(body.title !== undefined && { title: body.title }),
+    ...(body.description !== undefined && { description: body.description }),
+    ...(body.neighborhood !== undefined && { neighborhood: body.neighborhood }),
+    ...(body.county !== undefined && { county: body.county }),
+    ...(body.beds !== undefined && { beds: body.beds }),
+    ...(body.baths !== undefined && { baths: body.baths }),
+    ...(body.sqm !== undefined && { sqm: body.sqm }),
+    ...(body.furnished !== undefined && { furnished: body.furnished }),
+    ...(body.amenities !== undefined && { amenities: body.amenities }),
+    ...(body.coverImageUrl !== undefined && { coverImageUrl: body.coverImageUrl }),
+    ...(body.imageUrls !== undefined && {
+      imageUrls: body.imageUrls,
+      ...(body.coverImageUrl === undefined && body.imageUrls[0]
+        ? { coverImageUrl: body.imageUrls[0] }
+        : {}),
+    }),
+    ...(body.priceKes !== undefined && { priceKes: body.priceKes }),
+    ...(body.priceUnit !== undefined && { priceUnit: body.priceUnit }),
+    ...(body.cleaningFeeKes !== undefined && { cleaningFeeKes: body.cleaningFeeKes }),
+    ...(body.approxLat !== undefined && { approxLat: body.approxLat }),
+    ...(body.approxLng !== undefined && { approxLng: body.approxLng }),
+    ...(body.exactAddress !== undefined && { exactAddress: body.exactAddress }),
+    ...(body.exactLat !== undefined && { exactLat: body.exactLat }),
+    ...(body.exactLng !== undefined && { exactLng: body.exactLng }),
+    ...(body.hostName !== undefined && { hostName: body.hostName }),
+    ...(body.hostPhone !== undefined && { hostPhone: body.hostPhone }),
+    ...(body.hostWhatsapp !== undefined && { hostWhatsapp: body.hostWhatsapp }),
+    ...(body.vacant !== undefined && { vacant: body.vacant }),
+  };
+}

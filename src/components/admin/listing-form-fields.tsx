@@ -117,18 +117,54 @@ export function ListingFormFields({
         />
         <FieldError message={fieldErrors.title} />
       </div>
-      <div className="space-y-2 sm:col-span-2">
-        <Label>Description</Label>
-        <textarea
-          className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          placeholder="Short description for browse cards…"
-        />
-      </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Description</Label>
+                    <textarea
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                      value={form.description}
+                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      placeholder="Short description for browse cards…"
+                    />
+                  </div>
 
-      <Separator className="sm:col-span-2" />
-      <SectionHeading
+                  <Separator className="sm:col-span-2" />
+                  <SectionHeading
+                    title="Photos"
+                    description="Paste public image URLs (Cloudinary, S3, etc.). First image is the cover card."
+                  />
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Cover image URL</Label>
+                    <Input
+                      className={inputClass("coverImageUrl")}
+                      value={form.coverImageUrl}
+                      onChange={(e) => setForm({ ...form, coverImageUrl: e.target.value })}
+                      placeholder="https://…/cover.jpg"
+                    />
+                    <FieldError message={fieldErrors.coverImageUrl} />
+                    {form.coverImageUrl.trim() && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={form.coverImageUrl.trim()}
+                        alt="Cover preview"
+                        className="mt-2 h-32 w-full max-w-xs rounded-md border object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Gallery URLs (one per line)</Label>
+                    <textarea
+                      className="flex min-h-[72px] w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-xs"
+                      value={form.galleryUrlsText}
+                      onChange={(e) => setForm({ ...form, galleryUrlsText: e.target.value })}
+                      placeholder={"https://…/photo1.jpg\nhttps://…/photo2.jpg"}
+                    />
+                  </div>
+
+                  <Separator className="sm:col-span-2" />
+                  <SectionHeading
         title="Location"
         description="Location name is the public area label (e.g. Nyamasaria, Milimani)"
       />

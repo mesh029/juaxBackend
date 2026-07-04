@@ -10,6 +10,7 @@
     "migrate": "node scripts/migrate.mjs",
     "seed": "node scripts/seed.mjs",
     "test": "vitest run",
+    "smoke": "node scripts/e2e-smoke.mjs",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio"

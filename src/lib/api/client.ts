@@ -108,11 +108,14 @@ export const api = {
       token: null,
     }),
   signInSend: (phone: string) =>
-    apiFetch<{ ok: boolean; devCode?: string }>("/api/v1/auth/signin/send", {
-      method: "POST",
-      body: { phone },
-      token: null,
-    }),
+    apiFetch<{ ok: boolean; devCode?: string; devMode?: boolean; otpDisplayHint?: string }>(
+      "/api/v1/auth/signin/send",
+      {
+        method: "POST",
+        body: { phone },
+        token: null,
+      },
+    ),
   signInVerify: (phone: string, code: string, name?: string) =>
     apiFetch<{ token: string; user: ApiUser; isNewUser: boolean }>("/api/v1/auth/signin/verify", {
       method: "POST",
@@ -120,15 +123,29 @@ export const api = {
       token: null,
     }),
   signUpSend: (phone: string) =>
-    apiFetch<{ ok: boolean; devCode?: string }>("/api/v1/auth/signup/send", {
-      method: "POST",
-      body: { phone },
-      token: null,
-    }),
+    apiFetch<{ ok: boolean; devCode?: string; devMode?: boolean; otpDisplayHint?: string }>(
+      "/api/v1/auth/signup/send",
+      {
+        method: "POST",
+        body: { phone },
+        token: null,
+      },
+    ),
+  checkPhone: (phone: string) =>
+    apiFetch<{ phone: string; registered: boolean; suggestedFlow: "signin" | "signup"; devMode: boolean }>(
+      `/api/v1/auth/check-phone?phone=${encodeURIComponent(phone)}`,
+      { token: null },
+    ),
   signUpVerify: (phone: string, code: string, name: string, county?: string) =>
     apiFetch<{ token: string; user: ApiUser; isNewUser: boolean }>("/api/v1/auth/signup/verify", {
       method: "POST",
       body: { phone, code, name, county },
+      token: null,
+    }),
+  devLogin: (role: "admin" | "agent" | "user") =>
+    apiFetch<{ token: string; user: ApiUser }>("/api/v1/auth/dev/login", {
+      method: "POST",
+      body: { role },
       token: null,
     }),
   meProfile: () => apiFetch<{ user: UserProfile }>("/api/v1/me/profile"),
@@ -157,6 +174,22 @@ export const api = {
     const q = status ? `?status=${status}` : "";
     return apiFetch<{ listings: AdminListing[] }>(`/api/v1/admin/listings${q}`);
   },
+  agentListings: (status?: string) => {
+    const q = status ? `?status=${status}` : "";
+    return apiFetch<{ listings: AdminListing[] }>(`/api/v1/agent/listings${q}`);
+  },
+  agentListing: (id: string) =>
+    apiFetch<{ listing: AdminListing }>(`/api/v1/agent/listings/${id}`),
+  createAgentListing: (body: Record<string, unknown>) =>
+    apiFetch<{ listing: AdminListing }>("/api/v1/agent/listings", {
+      method: "POST",
+      body,
+    }),
+  updateAgentListing: (id: string, body: Record<string, unknown>) =>
+    apiFetch<{ listing: AdminListing }>(`/api/v1/agent/listings/${id}`, {
+      method: "PATCH",
+      body,
+    }),
   adminListing: (id: string) =>
     apiFetch<{ listing: AdminListing }>(`/api/v1/admin/listings/${id}`),
   createListing: (body: Record<string, unknown>) =>

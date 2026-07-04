@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { jsonWithCors, optionsResponse } from "@/lib/cors";
 import { OtpError, sendOtp } from "@/lib/auth/service";
+import { otpSendPayload } from "@/lib/auth/otp-response";
 
 const bodySchema = z.object({
   phone: z.string().min(9).max(20),
@@ -11,14 +12,7 @@ export async function POST(request: Request) {
     const body = bodySchema.parse(await request.json());
     const result = await sendOtp(body.phone);
 
-    return jsonWithCors(
-      {
-        ok: true,
-        message: "OTP sent",
-        ...(result.devCode ? { devCode: result.devCode } : {}),
-      },
-      request,
-    );
+    return jsonWithCors(otpSendPayload("otp", result.devCode), request);
   } catch (err) {
     if (err instanceof z.ZodError) {
       return jsonWithCors({ error: "validation_error", message: err.message }, request, {

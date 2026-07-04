@@ -13,7 +13,9 @@ const bodySchema = z.object({
 export async function POST(request: Request) {
   try {
     const body = bodySchema.parse(await request.json());
-    const { token, user, isNewUser } = await verifyOtp(body.phone, body.code, body.name);
+    const { token, user, isNewUser } = await verifyOtp(body.phone, body.code, body.name, {
+      existingOnly: true,
+    });
     return jsonWithCors(
       {
         token,
@@ -25,7 +27,9 @@ export async function POST(request: Request) {
     );
   } catch (err) {
     if (err instanceof OtpError) {
-      return jsonWithCors({ error: err.code, message: err.message }, request, { status: 400 });
+      const status =
+        err.code === "account_not_found" ? 404 : err.code === "rate_limited" ? 429 : 400;
+      return jsonWithCors({ error: err.code, message: err.message }, request, { status });
     }
     return handleRouteError(request, err);
   }

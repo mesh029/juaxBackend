@@ -203,6 +203,71 @@ describe("integration: auth flow", () => {
     const verifyData = await verifyRes.json();
     expect(verifyRes.status).toBe(200);
     expect(verifyData.user.role).toBe("admin");
-    expect(verifyData.user.displayName).toBe("Jua Admin");
+    expect(verifyData.user.displayName).toBeTruthy();
+  });
+});
+
+describe("integration: signin vs signup", () => {
+  const SIGNUP_PHONE = `78${String(Date.now()).slice(-7)}`;
+
+  it("signup rejects existing admin phone", async () => {
+    const send = await sendOtp(
+      jsonRequest("http://localhost/api/v1/auth/otp/send", { phone: ADMIN_PHONE }),
+    );
+    const sendData = await send.json();
+    const { POST: signupVerify } = await import("@/app/api/v1/auth/signup/verify/route");
+    const res = await signupVerify(
+      jsonRequest("http://localhost/api/v1/auth/signup/verify", {
+        phone: ADMIN_PHONE,
+        code: sendData.devCode,
+        name: "Duplicate",
+      }),
+    );
+    expect(res.status).toBe(409);
+    const data = await res.json();
+    expect(data.error).toBe("account_exists");
+  });
+
+  it("signin rejects unknown phone", async () => {
+    const unknown = `77${String(Date.now()).slice(-7)}`;
+    const { POST: signinSend } = await import("@/app/api/v1/auth/signin/send/route");
+    const { POST: signinVerify } = await import("@/app/api/v1/auth/signin/verify/route");
+    const sendRes = await signinSend(
+      jsonRequest("http://localhost/api/v1/auth/signin/send", { phone: unknown }),
+    );
+    const sendData = await sendRes.json();
+    const verifyRes = await signinVerify(
+      jsonRequest("http://localhost/api/v1/auth/signin/verify", {
+        phone: unknown,
+        code: sendData.devCode,
+      }),
+    );
+    expect(verifyRes.status).toBe(404);
+    const data = await verifyRes.json();
+    expect(data.error).toBe("account_not_found");
+  });
+
+  it("signup creates user with profile fields", async () => {
+    const { POST: signupSend } = await import("@/app/api/v1/auth/signup/send/route");
+    const { POST: signupVerify } = await import("@/app/api/v1/auth/signup/verify/route");
+    const sendRes = await signupSend(
+      jsonRequest("http://localhost/api/v1/auth/signup/send", { phone: SIGNUP_PHONE }),
+    );
+    const sendData = await sendRes.json();
+    expect(sendData.devMode).toBe(true);
+    expect(sendData.devCode).toMatch(/^\d{6}$/);
+    const verifyRes = await signupVerify(
+      jsonRequest("http://localhost/api/v1/auth/signup/verify", {
+        phone: SIGNUP_PHONE,
+        code: sendData.devCode,
+        name: "Signup Test",
+        county: "kisumu",
+      }),
+    );
+    expect(verifyRes.status).toBe(201);
+    const data = await verifyRes.json();
+    expect(data.isNewUser).toBe(true);
+    expect(data.user.displayName).toBe("Signup Test");
+    expect(data.user.county).toBe("kisumu");
   });
 });

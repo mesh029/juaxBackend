@@ -34,6 +34,8 @@ export type PublicListing = {
   vacant: boolean;
   distanceKm?: number;
   amenities: string[];
+  coverImageUrl?: string | null;
+  imageUrls?: string[];
   exactAddress?: string;
   exactPin?: { lat: number; lng: number };
   hostName?: string;
@@ -115,6 +117,8 @@ export type AdminListing = {
   priceKes: number;
   priceUnit: string;
   cleaningFeeKes: number;
+  coverImageUrl: string | null;
+  imageUrls: string[];
   beds: number;
   baths: number;
   sqm: number | null;

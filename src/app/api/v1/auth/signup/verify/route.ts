@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     const body = bodySchema.parse(await request.json());
     const { token, user, isNewUser } = await verifyOtp(body.phone, body.code, body.name, {
       requireName: true,
+      rejectExisting: true,
     });
 
     if (body.county?.trim() && isNewUser) {
@@ -44,7 +45,8 @@ export async function POST(request: Request) {
     );
   } catch (err) {
     if (err instanceof OtpError) {
-      return jsonWithCors({ error: err.code, message: err.message }, request, { status: 400 });
+      const status = err.code === "account_exists" ? 409 : 400;
+      return jsonWithCors({ error: err.code, message: err.message }, request, { status });
     }
     return handleRouteError(request, err);
   }

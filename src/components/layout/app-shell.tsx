@@ -11,6 +11,7 @@ import {
   MapPin,
   Shield,
   Sparkles,
+  UserCircle,
   Users,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
@@ -23,6 +24,7 @@ const mainNav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/listings", label: "Listings", icon: Home },
   { href: "/explore", label: "Map", icon: MapPin },
+  { href: "/profile", label: "Profile", icon: UserCircle },
 ];
 
 const adminNav = [
@@ -122,8 +124,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {user ? (
             <div className="space-y-3">
               <div className="rounded-lg bg-muted/50 p-3">
-                <p className="truncate text-sm font-medium">{user.displayName ?? "User"}</p>
-                <p className="truncate text-xs text-muted-foreground">{user.phone}</p>
+                <Link href="/profile" className="block hover:opacity-80">
+                  <p className="truncate text-sm font-medium">{user.displayName ?? "User"}</p>
+                  <p className="truncate text-xs text-muted-foreground">{user.phone}</p>
+                </Link>
                 <Badge variant="secondary" className="mt-2 capitalize">
                   {user.role}
                 </Badge>
@@ -149,7 +153,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="hidden text-sm text-muted-foreground md:block">
             Kisumu pilot · API simulator
           </p>
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="flex items-center gap-2">
+            {!user && (
+              <Button asChild size="sm" className="hidden md:inline-flex">
+                <Link href="/login">Sign in</Link>
+              </Button>
+            )}
+            <div className="flex items-center gap-2 md:hidden">
             <Button asChild variant="ghost" size="sm">
               <Link href="/labs">Lab</Link>
             </Button>
@@ -158,6 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link href="/login">Sign in</Link>
               </Button>
             )}
+            </div>
           </div>
         </header>
         <main className="flex-1 p-4 md:p-8">{children}</main>

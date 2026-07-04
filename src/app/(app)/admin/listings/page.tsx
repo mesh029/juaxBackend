@@ -33,7 +33,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatKes } from "@/lib/utils";
 
 function AdminListingsContent() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isAgent } = useAuth();
+  const canManage = isAdmin || isAgent;
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab") === "form" ? "form" : "list";
@@ -48,27 +49,27 @@ function AdminListingsContent() {
   const [form, setForm] = useState<ListingFormState>(INITIAL_LISTING_FORM);
 
   const load = useCallback(async () => {
-    const res = await api.adminListings();
+    const res = isAdmin ? await api.adminListings() : await api.agentListings();
     setListings(res.listings);
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canManage) return;
     load().catch((e) => {
       const msg = e instanceof ApiError ? e.message : String(e);
       setListError(msg);
       toast.error("Could not load listings", { description: msg });
     });
-  }, [isAdmin, load]);
+  }, [isAdmin, canManage, load]);
 
   useEffect(() => {
-    if (!isAdmin || !editId) {
+    if (!canManage || !editId) {
       if (tab === "form" && !editId) setForm(INITIAL_LISTING_FORM);
       return;
     }
     setFormLoading(true);
-    api
-      .adminListing(editId)
+    const fetchListing = isAdmin ? api.adminListing(editId) : api.agentListing(editId);
+    fetchListing
       .then(({ listing }) => setForm(listingToForm(listing)))
       .catch((e) => {
         const err = e instanceof ApiError ? e : ApiError.network(String(e));
@@ -76,7 +77,7 @@ function AdminListingsContent() {
         router.push("/admin/listings?tab=list");
       })
       .finally(() => setFormLoading(false));
-  }, [isAdmin, editId, tab, router]);
+  }, [isAdmin, canManage, editId, tab, router]);
 
   function goToList() {
     router.push("/admin/listings?tab=list");
@@ -127,10 +128,10 @@ function AdminListingsContent() {
       const payload = formToPayload(form);
       if (editId) {
         const { publish: _p, ...patchBody } = payload;
-        await api.updateListing(editId, patchBody);
+        await (isAdmin ? api.updateListing(editId, patchBody) : api.updateAgentListing(editId, patchBody));
         toast.success("Listing updated");
       } else {
-        await api.createListing(payload);
+        await (isAdmin ? api.createListing(payload) : api.createAgentListing(payload));
         toast.success("Listing created");
       }
       await load();
@@ -162,12 +163,12 @@ function AdminListingsContent() {
     }
   }
 
-  if (!isAdmin) {
+  if (!canManage) {
     return (
       <AppShell>
         <Card className="mx-auto max-w-md">
           <CardHeader>
-            <CardTitle>Admin only</CardTitle>
+            <CardTitle>Agents & admins only</CardTitle>
           </CardHeader>
         </Card>
       </AppShell>

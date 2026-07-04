@@ -213,15 +213,20 @@ EXPO_PUBLIC_API_BASE_URL=https://your-project.vercel.app
 
 ### 5. Deploy to Vercel
 
-1. Push this `backend/` folder to GitHub (no `.env`).
-2. Import the repo in [Vercel](https://vercel.com) → framework: **Next.js**.
-3. Add environment variables in Vercel → **Settings → Environment Variables**:
-   - `DATABASE_URL` — Aiven connection string
-   - `JWT_SECRET` — random 32+ char string
-   - `CORS_ORIGINS` — your Expo/web origins (comma-separated)
-4. Deploy. API base: `https://<your-project>.vercel.app`
+**Full guide:** [docs/VERCEL_DEPLOY.md](./docs/VERCEL_DEPLOY.md)
 
-Migrations still run locally via `psql` against Aiven (not from Vercel build).
+1. Push this repo to GitHub (no `.env`).
+2. Import in [Vercel](https://vercel.com) → **Next.js**.
+3. Environment variables (Production):
+   - `DATABASE_URL` — Aiven connection string (`sslmode=require`)
+   - `JWT_SECRET` — random 32+ char string
+   - `OTP_DEV_MODE` — `true` until SMS is wired (OTP shown in API response)
+   - `CORS_ORIGINS` — Vercel URL + local dev origins
+   - `NEXT_PUBLIC_MAPBOX_TOKEN` — web console map
+4. Deploy → API base: `https://<your-project>.vercel.app`
+5. Expo: `EXPO_PUBLIC_API_BASE_URL=https://<your-project>.vercel.app`
+
+Migrations run locally: `npm run migrate` (against Aiven, not from Vercel build).
 
 ---
 
@@ -269,5 +274,6 @@ backend/
 - [Roadmap & KPIs](./docs/ROADMAP.md)
 - [Architecture](./docs/ARCHITECTURE.md)
 - [Data model](./docs/DATA_MODEL.md)
-- [API outline](./docs/API_OUTLINE.md)
+- [Frontend integration (Expo)](./docs/FRONTEND_INTEGRATION.md)
+- [Vercel deploy](./docs/VERCEL_DEPLOY.md)
 - Mobile UI spec: [../my-expo-app/UI_SPECS.md](../my-expo-app/UI_SPECS.md)

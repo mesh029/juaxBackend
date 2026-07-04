@@ -11,12 +11,13 @@ const bodySchema = z.object({
 export async function POST(request: Request) {
   try {
     const body = bodySchema.parse(await request.json());
-    const { token, user } = await verifyOtp(body.phone, body.code, body.name);
+    const { token, user, isNewUser } = await verifyOtp(body.phone, body.code, body.name);
 
     return jsonWithCors(
       {
         token,
         user: toUserDto(user),
+        isNewUser,
       },
       request,
     );

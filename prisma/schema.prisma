@@ -179,6 +179,8 @@ model Listing {
   amenities      String[]
   priceKes       Int            @map("price_kes")
   priceUnit      String         @map("price_unit")
+  coverImageUrl  String?        @map("cover_image_url")
+  imageUrls      String[]       @default([]) @map("image_urls")
   rating         Decimal?       @db.Decimal(2, 1)
   reviewCount    Int            @default(0) @map("review_count")
   approxLat      Float          @map("approx_lat")

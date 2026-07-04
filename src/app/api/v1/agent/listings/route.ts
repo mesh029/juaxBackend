@@ -6,34 +6,20 @@ import { listingBodySchema } from "@/lib/listings/admin-schemas";
 import {
   adminListingSelect,
   listingCreateData,
-  listingPatchData,
   toAdminListingDto,
 } from "@/lib/listings/admin-dto";
 
-async function resolveAgentId(agentId?: string) {
-  if (agentId) {
-    const agent = await prisma.user.findFirst({
-      where: { id: agentId, role: { in: ["agent", "admin"] } },
-    });
-    if (!agent) throw new Error("invalid_agent");
-    return agent.id;
-  }
-  const fallback = await prisma.user.findFirst({
-    where: { role: "agent", isActive: true },
-    orderBy: { createdAt: "asc" },
-  });
-  if (!fallback) throw new Error("no_agent");
-  return fallback.id;
-}
-
 export async function GET(request: Request) {
   try {
-    await requireRole(request, ["admin"]);
+    const { user } = await requireRole(request, ["agent", "admin"]);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
 
     const listings = await prisma.listing.findMany({
-      where: status ? { status: status as never } : undefined,
+      where: {
+        agentId: user.id,
+        ...(status ? { status: status as never } : {}),
+      },
       orderBy: { createdAt: "desc" },
       take: 100,
       select: adminListingSelect,
@@ -47,24 +33,16 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireRole(request, ["admin"]);
+    const { user } = await requireRole(request, ["agent", "admin"]);
     const body = listingBodySchema.parse(await request.json());
-    const agentId = await resolveAgentId(body.agentId);
 
     const listing = await prisma.listing.create({
-      data: listingCreateData(agentId, body),
+      data: listingCreateData(user.id, { ...body, publish: body.publish ?? false }),
       select: adminListingSelect,
     });
 
     return jsonWithCors({ listing: toAdminListingDto(listing) }, request, { status: 201 });
   } catch (err) {
-    if (err instanceof Error && (err.message === "invalid_agent" || err.message === "no_agent")) {
-      return jsonWithCors(
-        { error: "invalid_agent", message: "No valid agent account found" },
-        request,
-        { status: 400 },
-      );
-    }
     return handleRouteError(request, err);
   }
 }

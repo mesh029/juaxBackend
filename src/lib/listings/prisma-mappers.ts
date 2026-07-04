@@ -14,6 +14,8 @@ export const publicListingSelect = {
   amenities: true,
   priceKes: true,
   priceUnit: true,
+  coverImageUrl: true,
+  imageUrls: true,
   approxLat: true,
   approxLng: true,
   vacant: true,
@@ -31,6 +33,8 @@ export function toListingRow(row: {
   sqm: number | null;
   furnished: boolean;
   amenities: string[];
+  coverImageUrl: string | null;
+  imageUrls: string[];
   priceKes: number;
   priceUnit: string;
   approxLat: number;
@@ -49,6 +53,8 @@ export function toListingRow(row: {
     sqm: row.sqm,
     furnished: row.furnished,
     amenities: row.amenities,
+    cover_image_url: row.coverImageUrl,
+    image_urls: row.imageUrls,
     price_kes: row.priceKes,
     price_unit: row.priceUnit,
     approx_lat: row.approxLat,

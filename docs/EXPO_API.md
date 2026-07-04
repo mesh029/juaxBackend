@@ -6,15 +6,24 @@ All paths below are relative to that base. Auth: `Authorization: Bearer <jwt>` u
 
 ---
 
-## 1. Auth (wire first)
+## 1. Auth & profiles (wire first)
+
+See **[FRONTEND_INTEGRATION.md](./FRONTEND_INTEGRATION.md)** for full sign-up/sign-in/profile flows and Expo step-by-step wiring.
 
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| POST | `/api/v1/auth/otp/send` | `{ "phone": "712345678" }` | `{ ok, devCode? }` |
-| POST | `/api/v1/auth/otp/verify` | `{ phone, code, name? }` | `{ token, user }` |
+| GET | `/api/v1/auth/check-phone?phone=` | — | `{ registered, suggestedFlow, devMode }` |
+| POST | `/api/v1/auth/signup/send` | `{ "phone": "712345678" }` | `{ ok, devMode, devCode? }` |
+| POST | `/api/v1/auth/signup/verify` | `{ phone, code, name, county? }` | `{ token, user, isNewUser }` |
+| POST | `/api/v1/auth/signin/send` | `{ "phone": "712345678" }` | `{ ok, devMode, devCode? }` |
+| POST | `/api/v1/auth/signin/verify` | `{ phone, code, name? }` | `{ token, user }` |
+| POST | `/api/v1/auth/otp/send` | `{ "phone": "712345678" }` | Legacy — same as sign-in send |
+| POST | `/api/v1/auth/otp/verify` | `{ phone, code, name? }` | Legacy — auto-creates user |
 | GET | `/api/v1/me` | — | `{ user }` |
+| GET | `/api/v1/me/profile` | — | `{ user, stats }` |
+| PATCH | `/api/v1/me/profile` | `{ displayName?, email?, county?, bio?, avatarUrl? }` | `{ user }` |
 
-Store `token` in `expo-secure-store`. Replaces mock OTP in `AuthScreen.tsx`.
+**Dev OTP:** when `devMode: true`, show `devCode` on screen (SMS not configured). Store `token` in `expo-secure-store`.
 
 ---
 

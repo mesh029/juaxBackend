@@ -11,7 +11,7 @@
 |------|----------|--------|
 | **Overall MVP** | **72%** | API, console, FUA, listings admin largely done |
 | Foundation & DB | 95% | Aiven live, Prisma, migrations 001–004 |
-| Auth & profiles | 85% | OTP + sign-in/sign-up aliases, profile PATCH |
+| Auth & profiles | 95% | Sign-in/up split, dev OTP, profile UI, integration doc |
 | Saka Keja browse | 90% | Listings, nearby, location gate, plans |
 | FUA / Mama Fua | 88% | Orders, mamafua tasks, tracking, admin queue |
 | Admin ops console | 80% | Listings, FUA, feedback, users, map |
@@ -59,12 +59,16 @@ Phase 10 Expo wiring       █░░░░░░░░░░░░░░░░�
 ### Auth (sign up / sign in)
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /api/v1/auth/signin/send` | Sign in — send OTP |
-| `POST /api/v1/auth/signin/verify` | Sign in — verify OTP → JWT |
+| `GET /api/v1/auth/check-phone` | Registered? → suggest sign-in vs sign-up |
+| `POST /api/v1/auth/signin/send` | Sign in — send OTP (`devCode` on screen in dev) |
+| `POST /api/v1/auth/signin/verify` | Sign in — existing accounts only → JWT |
 | `POST /api/v1/auth/signup/send` | Sign up — send OTP |
-| `POST /api/v1/auth/signup/verify` | Sign up — verify + **required name** → JWT |
-| `POST /api/v1/auth/otp/send` | Legacy alias (unchanged) |
-| `POST /api/v1/auth/otp/verify` | Legacy alias (unchanged) |
+| `POST /api/v1/auth/signup/verify` | Sign up — new accounts only, name required → JWT |
+| `POST /api/v1/auth/otp/send` | Legacy alias |
+| `POST /api/v1/auth/otp/verify` | Legacy alias (auto-creates user) |
+
+**Frontend wiring:** [docs/FRONTEND_INTEGRATION.md](./docs/FRONTEND_INTEGRATION.md)  
+Web: `/login` (sign-in/up tabs + dev OTP banner), `/profile` (edit profile)
 
 ### Listings admin (prior sprint, still active)
 - Full form with amenities, map coords, edit, toasts, field errors

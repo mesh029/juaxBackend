@@ -10,6 +10,8 @@ export type ListingPublicRow = {
   sqm: number | null;
   furnished: boolean;
   amenities: string[];
+  cover_image_url?: string | null;
+  image_urls?: string[];
   price_kes: number;
   price_unit: string;
   approx_lat: number;
@@ -59,6 +61,8 @@ export function toPublicListing(row: ListingPublicRow, distanceKm?: number) {
     sqm: row.sqm,
     furnished: row.furnished,
     amenities: row.amenities,
+    coverImageUrl: row.cover_image_url ?? row.image_urls?.[0] ?? null,
+    imageUrls: row.image_urls ?? [],
     priceKes: row.price_kes,
     priceUnit: row.price_unit,
     approxPin: { lat: row.approx_lat, lng: row.approx_lng },
