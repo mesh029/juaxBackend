@@ -1,0 +1,53 @@
+# Secrets — NEVER commit
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.local
+**/secrets.json
+*.pfx
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# Dependencies & build
+node_modules/
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Vercel / deploy artifacts
+.vercel/
+
+# Test & coverage
+coverage/
+.nyc_output/
+
+# Prisma (generated client lives in node_modules; keep schema + SQL migrations)
+# Do not ignore prisma/schema.prisma or database/migrations/
+
+# Logs & local data
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+docker-data/
+.pnpm-debug.log*
+
+# OS & editors
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+.cursor/
+
+# Legacy .NET (removed from project)
+bin/
+obj/
+.vs/

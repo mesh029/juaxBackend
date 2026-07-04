@@ -1,0 +1,365 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum user_role {
+  user
+  agent
+  admin
+}
+
+enum listing_type {
+  bnb
+  rental
+}
+
+enum listing_status {
+  draft
+  published
+  archived
+}
+
+enum subscription_plan {
+  daily
+  weekly
+  monthly
+}
+
+enum pickup_mode {
+  door
+  station
+  mamafua
+}
+
+enum laundry_status {
+  requested
+  pickup_scheduled
+  collected
+  processing
+  ready
+  delivered
+  cancelled
+}
+
+enum booking_status {
+  pending_payment
+  confirmed
+  cancelled
+  completed
+}
+
+enum payment_status {
+  pending
+  success
+  failed
+}
+
+enum laundry_actor_role {
+  customer
+  rider
+  station
+  admin
+  system
+}
+
+enum laundry_event_kind {
+  order_placed
+  customer_dropped_at_station
+  items_received_at_station
+  rider_assigned
+  rider_en_route
+  items_picked_up
+  received_at_hub
+  washing_started
+  washing_complete
+  ready_for_pickup
+  out_for_delivery
+  delivered_to_customer
+  customer_collected
+  mamafua_dispatched
+  mamafua_arrived
+  cleaning_started
+  cleaning_complete
+  visit_completed
+  note
+}
+
+enum feedback_status {
+  new
+  reviewed
+  resolved
+}
+
+enum feedback_service {
+  fua
+  mamafua
+  bnb
+  rental
+  general
+  app
+}
+
+enum feedback_category {
+  rating
+  complaint
+  suggestion
+  praise
+}
+
+model User {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phoneE164   String    @unique @map("phone_e164")
+  displayName String?   @map("display_name")
+  email       String?   @unique
+  county      String?
+  bio         String?
+  avatarUrl   String?   @map("avatar_url")
+  role        user_role @default(user)
+  isActive    Boolean   @default(true) @map("is_active")
+  lastLoginAt DateTime? @map("last_login_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  listings            Listing[]
+  subscriptions       Subscription[]
+  bnbBookings         BnbBooking[]
+  laundryOrders       LaundryOrder[]         @relation("LaundryOrderUser")
+  assignedLaundry     LaundryOrder[]         @relation("LaundryOrderAssignee")
+  laundryStatusEvents LaundryStatusEvent[]
+  laundryTrackingEvents LaundryTrackingEvent[]
+  feedback            ServiceFeedback[]
+  ridesInterest       RidesComingSoon[]
+  appSettingsUpdated  AppSetting[]
+
+  @@index([role], map: "idx_users_role")
+  @@index([createdAt(sort: Desc)], map: "idx_users_created")
+  @@map("users")
+}
+
+model OtpSession {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phoneE164  String    @map("phone_e164")
+  codeHash   String    @map("code_hash")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([phoneE164, expiresAt], map: "idx_otp_phone")
+  @@map("otp_sessions")
+}
+
+model AppSetting {
+  key       String   @id
+  valueJson Json     @map("value_json")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updater   User?    @relation(fields: [updatedBy], references: [id])
+
+  @@map("app_settings")
+}
+
+model Listing {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agentId        String         @map("agent_id") @db.Uuid
+  type           listing_type
+  status         listing_status @default(draft)
+  title          String
+  description    String?
+  neighborhood   String
+  county         String         @default("kisumu")
+  beds           Int            @default(1) @db.SmallInt
+  baths          Int            @default(1) @db.SmallInt
+  sqm            Int?
+  furnished      Boolean        @default(false)
+  amenities      String[]
+  priceKes       Int            @map("price_kes")
+  priceUnit      String         @map("price_unit")
+  rating         Decimal?       @db.Decimal(2, 1)
+  reviewCount    Int            @default(0) @map("review_count")
+  approxLat      Float          @map("approx_lat")
+  approxLng      Float          @map("approx_lng")
+  exactAddress   String?        @map("exact_address")
+  exactLat       Float?         @map("exact_lat")
+  exactLng       Float?         @map("exact_lng")
+  hostName       String?        @map("host_name")
+  hostPhone      String?        @map("host_phone")
+  hostWhatsapp   String?        @map("host_whatsapp")
+  vacant         Boolean        @default(true)
+  cleaningFeeKes Int            @default(0) @map("cleaning_fee_kes")
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  agent       User              @relation(fields: [agentId], references: [id])
+  bnbBookings BnbBooking[]
+  feedback    ServiceFeedback[]
+
+  @@index([type, status], map: "idx_listings_type_status")
+  @@index([county], map: "idx_listings_county")
+  @@index([agentId], map: "idx_listings_agent")
+  @@map("listings")
+}
+
+model Subscription {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String            @map("user_id") @db.Uuid
+  plan          subscription_plan
+  priceKes      Int               @map("price_kes")
+  startsAt      DateTime          @default(now()) @map("starts_at") @db.Timestamptz(6)
+  expiresAt     DateTime          @map("expires_at") @db.Timestamptz(6)
+  paymentStatus payment_status    @default(pending) @map("payment_status")
+  mpesaReceipt  String?           @map("mpesa_receipt")
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, expiresAt], map: "idx_subscriptions_user_active")
+  @@map("subscriptions")
+}
+
+model BnbBooking {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String         @map("user_id") @db.Uuid
+  listingId     String         @map("listing_id") @db.Uuid
+  checkIn       DateTime       @map("check_in") @db.Date
+  checkOut      DateTime       @map("check_out") @db.Date
+  guests        Int            @default(1) @db.SmallInt
+  nights        Int
+  nightlyRate   Int            @map("nightly_rate")
+  cleaningFee   Int            @default(0) @map("cleaning_fee")
+  totalKes      Int            @map("total_kes")
+  status        booking_status @default(pending_payment)
+  paymentStatus payment_status @default(pending) @map("payment_status")
+  mpesaReceipt  String?        @map("mpesa_receipt")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user    User    @relation(fields: [userId], references: [id])
+  listing Listing @relation(fields: [listingId], references: [id])
+
+  @@index([userId], map: "idx_bnb_bookings_user")
+  @@map("bnb_bookings")
+}
+
+model LaundryStation {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String   @unique
+  name      String
+  address   String
+  county    String
+  lat       Float
+  lng       Float
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  orders LaundryOrder[]
+
+  @@map("laundry_stations")
+}
+
+model LaundryOrder {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String         @map("user_id") @db.Uuid
+  pickupMode    pickup_mode    @map("pickup_mode")
+  stationId     String?        @map("station_id") @db.Uuid
+  pickupAddress String?        @map("pickup_address")
+  pickupLat     Float?         @map("pickup_lat")
+  pickupLng     Float?         @map("pickup_lng")
+  pickupCounty  String?        @map("pickup_county")
+  loadKg        Decimal        @default(4) @map("load_kg") @db.Decimal(5, 1)
+  loadItems     Int?           @map("load_items")
+  scheduleDate  DateTime       @map("schedule_date") @db.Date
+  scheduleBand  String         @map("schedule_band")
+  ratePerKg     Int            @default(80) @map("rate_per_kg")
+  pickupFeeKes  Int            @default(150) @map("pickup_fee_kes")
+  tasks         String[]       @default([])
+  tasksFeeKes   Int            @default(0) @map("tasks_fee_kes")
+  totalKes      Int            @map("total_kes")
+  status        laundry_status @default(requested)
+  paymentStatus payment_status @default(pending) @map("payment_status")
+  mpesaReceipt  String?        @map("mpesa_receipt")
+  adminNotes    String?        @map("admin_notes")
+  assignedTo    String?        @map("assigned_to") @db.Uuid
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user       User                 @relation("LaundryOrderUser", fields: [userId], references: [id])
+  station    LaundryStation?      @relation(fields: [stationId], references: [id])
+  assignee   User?                @relation("LaundryOrderAssignee", fields: [assignedTo], references: [id])
+  statusLog  LaundryStatusEvent[]
+  tracking   LaundryTrackingEvent[]
+  feedback   ServiceFeedback[]
+
+  @@index([status, createdAt(sort: Desc)], map: "idx_laundry_orders_status")
+  @@index([userId], map: "idx_laundry_orders_user")
+  @@map("laundry_orders")
+}
+
+model LaundryStatusEvent {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId   String         @map("order_id") @db.Uuid
+  status    laundry_status
+  note      String?
+  createdBy String?        @map("created_by") @db.Uuid
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order   LaundryOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  creator User?        @relation(fields: [createdBy], references: [id])
+
+  @@map("laundry_status_events")
+}
+
+model LaundryTrackingEvent {
+  id        String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId   String             @map("order_id") @db.Uuid
+  kind      laundry_event_kind
+  actorRole laundry_actor_role @map("actor_role")
+  note      String?
+  createdBy String?            @map("created_by") @db.Uuid
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order   LaundryOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  creator User?        @relation(fields: [createdBy], references: [id])
+
+  @@index([orderId, createdAt(sort: Asc)], map: "idx_laundry_tracking_order")
+  @@map("laundry_tracking_events")
+}
+
+model ServiceFeedback {
+  id         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String?           @map("user_id") @db.Uuid
+  service    feedback_service
+  category   feedback_category @default(rating)
+  rating     Int?              @db.SmallInt
+  title      String?
+  body       String
+  orderId    String?           @map("order_id") @db.Uuid
+  listingId  String?           @map("listing_id") @db.Uuid
+  status     feedback_status   @default(new)
+  adminNotes String?           @map("admin_notes")
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user    User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order   LaundryOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  listing Listing?      @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)], map: "idx_feedback_status_created")
+  @@index([service, createdAt(sort: Desc)], map: "idx_feedback_service")
+  @@map("service_feedback")
+}
+
+model RidesComingSoon {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  interestNote String?  @map("interest_note")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("rides_coming_soon")
+}
