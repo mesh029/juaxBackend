@@ -271,3 +271,52 @@ describe("integration: signin vs signup", () => {
     expect(data.user.county).toBe("kisumu");
   });
 });
+
+describe("integration: email auth", () => {
+  const EMAIL = `test+${Date.now()}@juax.app`;
+  const PASSWORD = "TestPass123!";
+
+  it("signs up and signs in with email/password", async () => {
+    const { POST: emailSignup } = await import("@/app/api/v1/auth/email/signup/route");
+    const { POST: emailSignin } = await import("@/app/api/v1/auth/email/signin/route");
+
+    const signupRes = await emailSignup(
+      jsonRequest("http://localhost/api/v1/auth/email/signup", {
+        email: EMAIL,
+        password: PASSWORD,
+        name: "Email Test User",
+        county: "kisumu",
+      }),
+    );
+    expect(signupRes.status).toBe(201);
+    const signupData = await signupRes.json();
+    expect(signupData.token).toBeTruthy();
+    expect(signupData.user.email).toBe(EMAIL);
+
+    const signinRes = await emailSignin(
+      jsonRequest("http://localhost/api/v1/auth/email/signin", {
+        email: EMAIL,
+        password: PASSWORD,
+      }),
+    );
+    expect(signinRes.status).toBe(200);
+    const signinData = await signinRes.json();
+    expect(signinData.user.displayName).toBe("Email Test User");
+
+    const meRes = await getMe(
+      jsonRequest("http://localhost/api/v1/me", undefined, signinData.token),
+    );
+    expect(meRes.status).toBe(200);
+  });
+
+  it("rejects wrong password", async () => {
+    const { POST: emailSignin } = await import("@/app/api/v1/auth/email/signin/route");
+    const res = await emailSignin(
+      jsonRequest("http://localhost/api/v1/auth/email/signin", {
+        email: EMAIL,
+        password: "wrong-password",
+      }),
+    );
+    expect(res.status).toBe(401);
+  });
+});

@@ -142,13 +142,17 @@ export async function verifyOtp(
   }
 
   const user = await findOrCreateUser(phone, displayName, isNewUser);
-  const token = await signAccessToken({
+  const token = await issueSessionForUser(user);
+
+  return { token, user, isNewUser };
+}
+
+export async function issueSessionForUser(user: AuthUser): Promise<string> {
+  return signAccessToken({
     sub: user.id,
     role: user.role,
     phone: user.phone_e164,
   });
-
-  return { token, user, isNewUser };
 }
 
 async function findOrCreateUser(
@@ -256,16 +260,12 @@ export async function devLoginByRole(
   });
 
   const authUser = toAuthUser(user);
-  const token = await signAccessToken({
-    sub: authUser.id,
-    role: authUser.role,
-    phone: authUser.phone_e164,
-  });
+  const token = await issueSessionForUser(authUser);
 
   return { token, user: authUser };
 }
 
-function toAuthUser(user: {
+export function toAuthUser(user: {
   id: string;
   phoneE164: string;
   displayName: string | null;

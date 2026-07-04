@@ -116,6 +116,7 @@ model User {
   phoneE164   String    @unique @map("phone_e164")
   displayName String?   @map("display_name")
   email       String?   @unique
+  passwordHash String?  @map("password_hash")
   county      String?
   bio         String?
   avatarUrl   String?   @map("avatar_url")

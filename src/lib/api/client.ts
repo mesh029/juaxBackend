@@ -148,6 +148,23 @@ export const api = {
       body: { role },
       token: null,
     }),
+  emailSignUp: (body: {
+    email: string;
+    password: string;
+    name: string;
+    county?: string;
+    phone?: string;
+  }) =>
+    apiFetch<{ token: string; user: ApiUser; isNewUser: boolean }>(
+      "/api/v1/auth/email/signup",
+      { method: "POST", body, token: null },
+    ),
+  emailSignIn: (email: string, password: string) =>
+    apiFetch<{ token: string; user: ApiUser }>("/api/v1/auth/email/signin", {
+      method: "POST",
+      body: { email, password },
+      token: null,
+    }),
   meProfile: () => apiFetch<{ user: UserProfile }>("/api/v1/me/profile"),
   updateProfile: (body: Record<string, unknown>) =>
     apiFetch<{ user: ApiUser }>("/api/v1/me/profile", { method: "PATCH", body }),
