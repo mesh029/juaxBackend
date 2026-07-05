@@ -17,7 +17,49 @@
 | Admin ops console | 80% | Listings, FUA, feedback, users, map |
 | Payments (M-Pesa) | 0% | Phase 6 |
 | Expo app integration | 10% | [FRONTEND_AUTH.md](./docs/FRONTEND_AUTH.md) ready |
-| Deploy (Vercel) | 15% | Builds pass; apply migration 006 on Aiven |
+| Deploy (Vercel) | 15% | Use Aiven **pooler** URL + `connection_limit=1` |
+
+---
+
+## Vercel + Aiven (~20 connections)
+
+You can stay on **Vercel + direct Aiven** for a pilot if you avoid connection leaks.
+
+### What the codebase does
+
+| Guard | Status |
+|-------|--------|
+| **Single `PrismaClient`** | `src/lib/db.ts` — import `{ prisma }` from `@/lib/db` or `@/lib/prisma` only |
+| **Never** `new PrismaClient()` in routes | Audited — only one instance in `db.ts` |
+| **globalThis cache in production** | Yes — required on Vercel (dev-only cache is a common bug) |
+| **`connection_limit=1`** on Vercel | Auto when `VERCEL` env is set |
+| **Node runtime** | API routes use Node (not Edge) |
+
+```typescript
+// ✅ Everywhere in the app
+import { prisma } from "@/lib/prisma";
+
+// ❌ Never in route handlers
+const prisma = new PrismaClient();
+```
+
+### The 20-connection budget
+
+Aiven hobby ≈ **20 connections**. With `connection_limit=1` per serverless instance:
+
+- Each warm Vercel function ≈ **1** DB connection  
+- ~**18–20** concurrent warm instances max before errors  
+- Fine for MVP / low traffic; bursts or many parallel requests can still hit the limit  
+
+**Vercel env (direct Aiven, no Accelerate):**
+
+```
+DATABASE_URL=postgres://…direct aiven…?sslmode=require
+DIRECT_URL=postgres://…same…?sslmode=require
+PRISMA_CONNECTION_LIMIT=1
+```
+
+If you still see “too many connections” under real load → add [Prisma Accelerate](https://console.prisma.io) (free tier) or upgrade Aiven. See [docs/DATABASE_POOLING.md](./docs/DATABASE_POOLING.md).
 
 ---
 

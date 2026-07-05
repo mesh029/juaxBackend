@@ -39,13 +39,39 @@ Set for **Production** (and Preview if you want staging):
 
 | Variable | Required | Example / notes |
 |----------|----------|-----------------|
-| `DATABASE_URL` | Yes | `postgres://USER:PASS@HOST:PORT/defaultdb?sslmode=require` — same Aiven URL as local |
+| `DATABASE_URL` | Yes | **Aiven connection pooler URL** (see below) — not the direct Postgres port on Vercel |
+| `DATABASE_USE_PGBOUNCER` | Yes on Vercel | `true` when using Aiven pooler / PgBouncer |
+| `PRISMA_CONNECTION_LIMIT` | Recommended | `1` on Vercel (auto-default when `VERCEL` is set) |
 | `JWT_SECRET` | Yes | Long random string (32+ chars). Generate: `openssl rand -base64 32` |
-| `OTP_DEV_MODE` | Yes (for now) | `true` — returns OTP in JSON until SMS is wired. Set `false` when SMS goes live |
-| `CORS_ORIGINS` | Yes | Your Vercel URL + Expo dev origins (see below) |
+| `OTP_DEV_MODE` | Yes (for now) | `true` — returns OTP in JSON until SMS is wired |
+| `CORS_ORIGINS` | Optional | Expo Web only; native app ignores CORS |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | For web map | Mapbox public token (ops console `/explore`) |
 
 **Do not set** `NODE_ENV` — Vercel sets it to `production`.
+
+### Fix: “Too many database connections” on Vercel
+
+**Aiven free/hobby tiers do not have connection pools** (Startup plan+ required).
+
+Using a **direct** Aiven URL on Vercel will exhaust connections. See the full guide:
+
+**→ [docs/DATABASE_POOLING.md](./DATABASE_POOLING.md)**
+
+**Recommended (free):** [Prisma Accelerate](https://console.prisma.io) — connect your Aiven DB, use `prisma://…` on Vercel:
+
+```
+DATABASE_URL=prisma://accelerate.prisma-data.net/?api_key=YOUR_KEY
+DIRECT_URL=postgres://USER:PASS@HOST:PORT/defaultdb?sslmode=require
+```
+
+If you upgrade Aiven to Startup+, use their pooler URL instead (see DATABASE_POOLING.md Option C).
+
+### Optional tuning
+
+| Variable | Default on Vercel | Purpose |
+|----------|-------------------|---------|
+| `PRISMA_CONNECTION_LIMIT` | `1` | Max DB connections per serverless instance |
+| `PRISMA_POOL_TIMEOUT` | `20` | Seconds to wait for a pool slot |
 
 ### `CORS_ORIGINS` example
 
@@ -63,18 +89,7 @@ https://api.juax.co.ke,https://juax-backend.vercel.app,http://localhost:8081
 
 > **Expo on a physical device** uses native `fetch` — CORS does not block it. CORS matters for **Expo Web** and browser-based clients only.
 
-### Optional tuning
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `PRISMA_CONNECTION_LIMIT` | `3` | Max DB connections per serverless instance |
-| `PRISMA_POOL_TIMEOUT` | `30` | Seconds to wait for a pool slot |
-
-Aiven free tiers have low connection limits — keep `connection_limit` at 3 or use Aiven connection pooling if you scale up.
-
----
-
-## 4. Deploy
+### `CORS_ORIGINS` example
 
 Push to `main` or click **Deploy** in Vercel.
 
@@ -152,7 +167,8 @@ Test user (after seed): phone `700000004`.
 |---------|-----|
 | Build fails on Prisma | Ensure `postinstall`: `prisma generate` in `package.json` |
 | 500 on auth / DB errors | Check Vercel function logs; verify `DATABASE_URL` |
-| P2024 pool timeout | Lower traffic or reduce `PRISMA_CONNECTION_LIMIT`; check Aiven max connections |
+| P2024 / too many connections | Use **Aiven pooler URL** + `DATABASE_USE_PGBOUNCER=true` + redeploy |
+| `remaining connection slots are reserved` | Same — direct Postgres URL on Vercel exhausts Aiven's ~20 conn limit |
 | OTP missing `devCode` in prod | Set `OTP_DEV_MODE=true` on Vercel |
 | Expo “Network request failed” | Use HTTPS Vercel URL; on Android emulator use `10.0.2.2` only for **local** backend, not Vercel |
 | CORS error in Expo Web | Add your web origin to `CORS_ORIGINS` |
