@@ -61,6 +61,14 @@ PRISMA_CONNECTION_LIMIT=1
 
 If you still see “too many connections” under real load → add [Prisma Accelerate](https://console.prisma.io) (free tier) or upgrade Aiven. See [docs/DATABASE_POOLING.md](./docs/DATABASE_POOLING.md).
 
+**Developer guide (required reading):** [docs/CONNECTION_BUDGET.md](./docs/CONNECTION_BUDGET.md) — Prisma singleton, client fan-out rules, bootstrap endpoint.
+
+### Efficient catalog endpoint
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/v1/catalog/bootstrap?county=kisumu` | **One call** for listings (rental+bnb), stations, Mama Fua tasks, plans — use on app cold start |
+
 ---
 
 ## Test all endpoints (console output)

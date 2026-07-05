@@ -44,17 +44,12 @@ export default function DashboardPage() {
   const [dbOk, setDbOk] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      api.listings(),
-      api.laundryStations(),
-      api.services(),
-      api.health(),
-    ]).then(([l, s, svc, health]) => {
-      setListings(l);
-      setStations({ length: s.length });
+    Promise.all([api.catalogBootstrap(), api.services()]).then(([catalog, svc]) => {
+      setListings([...catalog.listings.rental, ...catalog.listings.bnb]);
+      setStations({ length: catalog.laundryStations.length });
       setServices(svc);
-      setDbOk(health.db === "connected");
-    });
+      setDbOk(true);
+    }).catch(() => setDbOk(false));
   }, []);
 
   const rentals = listings.filter((l) => l.type === "rental").length;

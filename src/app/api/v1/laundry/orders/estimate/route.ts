@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/auth/require-auth";
 import { jsonWithCors, optionsResponse } from "@/lib/cors";
 import { handleRouteError } from "@/lib/api/route-helpers";
+import { getScheduleBandLabel } from "@/lib/laundry/convenience-times";
 import { computeOrderPricing } from "@/lib/laundry/pricing";
 import {
   laundryOrderBodySchema,
@@ -36,6 +37,9 @@ export async function POST(request: Request) {
         loadKg: body.loadKg,
         pickupMode: body.pickupMode,
         tasks: body.tasks,
+        scheduleDate: body.scheduleDate,
+        scheduleBand: body.scheduleBand,
+        scheduleLabel: getScheduleBandLabel(body.scheduleBand),
       },
       request,
     );

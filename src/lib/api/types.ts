@@ -172,3 +172,28 @@ export type HealthResponse = {
   status: string;
   db: string;
 };
+
+export type MamaFuaConvenienceBand = {
+  id: "asap" | "morning" | "afternoon" | "evening";
+  label: string;
+  shortLabel: string;
+  description: string;
+  timeWindow: string | null;
+};
+
+export type AppCatalogBootstrap = {
+  county: string;
+  kisumuOnly: boolean;
+  listings: {
+    rental: PublicListing[];
+    bnb: PublicListing[];
+  };
+  laundryStations: LaundryStation[];
+  mamaFua: {
+    dispatchFeeKes: number;
+    description: string;
+    tasks: { id: string; label: string; description: string; priceKes: number; acceptsLoadKg: boolean }[];
+    convenienceTimes?: MamaFuaConvenienceBand[];
+  };
+  subscriptionPlans: SubscriptionPlan[];
+};

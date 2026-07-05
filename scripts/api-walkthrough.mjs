@@ -57,6 +57,12 @@ async function main() {
   const health = await call("Health", "/api/health");
   c.ok(`DB: ${health.data.db}`);
 
+  c.title("Catalog bootstrap (app cold start)");
+  const bootstrap = await call("Catalog bootstrap", "/api/v1/catalog/bootstrap?county=kisumu");
+  c.ok(
+    `${bootstrap.data.listings.rental.length} rentals, ${bootstrap.data.listings.bnb.length} bnbs, ${bootstrap.data.laundryStations.length} stations`,
+  );
+
   c.title("Services");
   await call("Services", "/api/v1/services");
 

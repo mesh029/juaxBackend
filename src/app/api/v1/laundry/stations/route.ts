@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { jsonWithCors, optionsResponse } from "@/lib/cors";
+import { toLaundryStationDto } from "@/lib/laundry/station-dto";
 
 export async function GET(request: Request) {
   const stations = await prisma.laundryStation.findMany({
@@ -16,17 +17,7 @@ export async function GET(request: Request) {
     },
   });
 
-  return jsonWithCors(
-    stations.map((s) => ({
-      id: s.id,
-      code: s.code,
-      name: s.name,
-      address: s.address,
-      county: s.county,
-      pin: { lat: s.lat, lng: s.lng },
-    })),
-    request,
-  );
+  return jsonWithCors(stations.map(toLaundryStationDto), request);
 }
 
 export function OPTIONS(request: Request) {

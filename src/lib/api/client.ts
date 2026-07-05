@@ -2,6 +2,7 @@ import type {
   AdminListing,
   AdminUser,
   ApiUser,
+  AppCatalogBootstrap,
   HealthResponse,
   LaundryOrder,
   LaundryStation,
@@ -76,6 +77,9 @@ async function apiFetch<T>(path: string, opts: FetchOpts = {}): Promise<T> {
 
 export const api = {
   health: () => apiFetch<HealthResponse>("/api/health"),
+  /** One round-trip for mobile/web cold start — prefer over fan-out. See docs/CONNECTION_BUDGET.md */
+  catalogBootstrap: (county = "kisumu") =>
+    apiFetch<AppCatalogBootstrap>(`/api/v1/catalog/bootstrap?county=${encodeURIComponent(county)}`),
   services: () => apiFetch<ServicesResponse>("/api/v1/services"),
   listings: (params?: { type?: string; county?: string }) => {
     const q = new URLSearchParams({ county: params?.county ?? "kisumu" });

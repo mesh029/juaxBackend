@@ -302,6 +302,61 @@ Full request/response shapes for listings, FUA, feedback: [EXPO_API.md](./EXPO_A
 
 ---
 
+## 3b. Connection budget & app cold start
+
+**Read:** [CONNECTION_BUDGET.md](./CONNECTION_BUDGET.md) before adding hooks that fetch on mount.
+
+On app open, call **one** bootstrap endpoint — do not fan out across counties or resource types:
+
+```typescript
+import { fetchAppCatalog } from './lib/api';
+
+const catalog = await fetchAppCatalog('kisumu');
+// catalog.listings.rental, catalog.listings.bnb
+// catalog.laundryStations, catalog.mamaFua, catalog.subscriptionPlans
+```
+
+| Do | Don't |
+|----|-------|
+| `GET /api/v1/catalog/bootstrap` on home load | `Promise.all` over 4 counties × rental/bnb |
+| `GET /api/v1/me` once to validate token | `fetchMe` + `fetchProfile` on every boot |
+| Load profile when user opens profile screen | Poll `/api/health` from the app |
+
+Expo implementation: `hooks/useAppData.ts` → `fetchAppCatalog()`.
+
+### Mama Fua convenience times
+
+`GET /api/v1/laundry/mamafua/tasks` and catalog bootstrap include:
+
+```json
+{
+  "convenienceTimes": [
+    { "id": "asap", "label": "Flexible", "shortLabel": "Flexible · today", "timeWindow": null },
+    { "id": "morning", "label": "Morning", "shortLabel": "Morning (8–12)", "timeWindow": "08:00–12:00" }
+  ],
+  "orderInput": { "required": ["pickupAddress", "tasks", "scheduleDate", "scheduleBand"], ... }
+}
+```
+
+On estimate/create, send the same fields the UI collects:
+
+```typescript
+{
+  pickupMode: 'mamafua',
+  pickupAddress: '…',
+  pickupLat, pickupLng,
+  tasks: ['vacuum_upholstery', 'mop_floors'],
+  loadKg: 4, // when tasks includes "laundry"
+  scheduleDate: '2026-07-05', // YYYY-MM-DD
+  scheduleBand: 'morning',    // asap | morning | afternoon | evening
+  notes: 'Gate code…',
+}
+```
+
+Estimate response echoes `scheduleDate`, `scheduleBand`, `scheduleLabel`.
+
+---
+
 ## 4. Web console (this repo)
 
 The Next.js app **is** a frontend client:

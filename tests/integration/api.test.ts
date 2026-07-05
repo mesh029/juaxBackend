@@ -7,6 +7,7 @@ import { GET as listings } from "@/app/api/v1/listings/route";
 import { GET as listingById } from "@/app/api/v1/listings/[id]/route";
 import { GET as nearbyListings } from "@/app/api/v1/listings/nearby/route";
 import { GET as subscriptionPlans } from "@/app/api/v1/subscriptions/plans/route";
+import { GET as catalogBootstrap } from "@/app/api/v1/catalog/bootstrap/route";
 import { prisma } from "@/lib/db";
 
 /** Unique per run to avoid OTP rate-limit collisions across test runs. */
@@ -109,6 +110,28 @@ describe("integration: health + listings", () => {
       jsonRequest("http://localhost/api/v1/listings/nearby"),
     );
     expect(res.status).toBe(400);
+  });
+
+  it("catalog bootstrap returns bundled public data in one response", async () => {
+    const res = await catalogBootstrap(
+      jsonRequest("http://localhost/api/v1/catalog/bootstrap?county=kisumu"),
+    );
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.county).toBe("kisumu");
+    expect(Array.isArray(data.listings.rental)).toBe(true);
+    expect(Array.isArray(data.listings.bnb)).toBe(true);
+    expect(data.listings.rental.length).toBeGreaterThanOrEqual(2);
+    expect(data.listings.bnb.length).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(data.laundryStations)).toBe(true);
+    expect(Array.isArray(data.mamaFua.tasks)).toBe(true);
+    expect(Array.isArray(data.mamaFua.convenienceTimes)).toBe(true);
+    expect(data.mamaFua.convenienceTimes.length).toBeGreaterThanOrEqual(3);
+    expect(Array.isArray(data.subscriptionPlans)).toBe(true);
+    expect(data.listings.rental[0]).not.toHaveProperty("exactAddress");
+    if (data.listings.rental[0].coverImageUrl) {
+      expect(typeof data.listings.rental[0].coverImageUrl).toBe("string");
+    }
   });
 });
 

@@ -10,6 +10,8 @@ If you deploy the API to **Vercel serverless** with a **direct** Aiven URL, each
 
 You need an external pooler or a non-serverless host — **unless** traffic is low enough to stay within Aiven’s ~20 connection cap (see Option 0).
 
+**Developer checklist:** [CONNECTION_BUDGET.md](./CONNECTION_BUDGET.md)
+
 ---
 
 ## Option 0 — Vercel + direct Aiven (stay within ~20 connections)
