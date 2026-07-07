@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { isPaymentDevMode } from "@/lib/payments/dev";
+import { canConfirmPilotPayment } from "@/lib/payments/dev";
 import type { bnbBookingBodySchema } from "@/lib/bnb/schemas";
 import type { z } from "zod";
 
@@ -89,7 +89,7 @@ export async function confirmBnbBookingPayment(
   bookingId: string,
   mpesaReceipt?: string,
 ) {
-  if (!isPaymentDevMode()) {
+  if (!canConfirmPilotPayment(mpesaReceipt)) {
     throw new Error("payment_not_available");
   }
 

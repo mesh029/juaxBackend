@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { isPaymentDevMode } from "@/lib/payments/dev";
+import { canConfirmPilotPayment } from "@/lib/payments/dev";
 import { getPlanById, type SubscriptionPlanId } from "@/lib/subscription-plans";
 
 const subSelect = {
@@ -50,7 +50,7 @@ export async function confirmSubscriptionPayment(
   subscriptionId: string,
   mpesaReceipt?: string,
 ) {
-  if (!isPaymentDevMode()) {
+  if (!canConfirmPilotPayment(mpesaReceipt)) {
     throw new Error("payment_not_available");
   }
 
