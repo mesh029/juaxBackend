@@ -20,6 +20,12 @@ type FeedbackRow = Pick<
     phoneE164: string;
     displayName: string | null;
   } | null;
+  listing?: {
+    id: string;
+    title: string;
+    neighborhood: string;
+    type: string;
+  } | null;
 };
 
 export const feedbackListSelect = {
@@ -37,6 +43,9 @@ export const feedbackListSelect = {
   updatedAt: true,
   user: {
     select: { id: true, phoneE164: true, displayName: true },
+  },
+  listing: {
+    select: { id: true, title: true, neighborhood: true, type: true },
   },
 } as const;
 
@@ -59,6 +68,14 @@ export function toFeedbackDto(row: FeedbackRow) {
           id: row.user.id,
           phone: row.user.phoneE164,
           displayName: row.user.displayName,
+        }
+      : null,
+    listing: row.listing
+      ? {
+          id: row.listing.id,
+          title: row.listing.title,
+          neighborhood: row.listing.neighborhood,
+          type: row.listing.type,
         }
       : null,
   };

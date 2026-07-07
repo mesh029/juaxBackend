@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ClipboardList, Home, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, ClipboardList, CreditCard, Home, ShieldCheck, Users } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api/client";
 import { AppShell } from "@/components/layout/app-shell";
@@ -99,6 +99,38 @@ export default function AdminPage() {
               </Button>
               <Button asChild variant="outline" size="sm" className="w-full">
                 <Link href="/admin/stations">Mama Fua stations</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CreditCard className="mb-2 h-5 w-5 text-primary" />
+              <CardTitle className="text-base">Subscriptions</CardTitle>
+              <CardDescription>Rental unlock memberships</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" size="sm" className="w-full">
+                <Link href="/admin/subscriptions">
+                  View subs
+                  <ArrowRight />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <Home className="mb-2 h-5 w-5 text-primary" />
+              <CardTitle className="text-base">Listing requests</CardTitle>
+              <CardDescription>Viewings & BnB tours</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" size="sm" className="w-full">
+                <Link href="/admin/listing-requests">
+                  Open queue
+                  <ArrowRight />
+                </Link>
               </Button>
             </CardContent>
           </Card>

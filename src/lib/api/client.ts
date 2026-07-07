@@ -174,14 +174,44 @@ export const api = {
     apiFetch<{ user: ApiUser }>("/api/v1/me/profile", { method: "PATCH", body }),
   submitFeedback: (body: Record<string, unknown>) =>
     apiFetch<{ feedback: ServiceFeedback }>("/api/v1/feedback", { method: "POST", body }),
-  adminFeedback: (params?: { status?: string; service?: string }) => {
+  adminFeedback: (params?: { status?: string; service?: string; category?: string; listingRequests?: boolean }) => {
     const q = new URLSearchParams();
     if (params?.status) q.set("status", params.status);
     if (params?.service) q.set("service", params.service);
+    if (params?.category) q.set("category", params.category);
+    if (params?.listingRequests) q.set("listingRequests", "true");
     const qs = q.toString();
     return apiFetch<{ feedback: ServiceFeedback[]; summary: { newCount: number; avgRating: number | null } }>(
       `/api/v1/admin/feedback${qs ? `?${qs}` : ""}`,
     );
+  },
+  adminListingRequests: (params?: { status?: string; service?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.status) q.set("status", params.status);
+    if (params?.service) q.set("service", params.service);
+    q.set("listingRequests", "true");
+    return apiFetch<{ feedback: ServiceFeedback[]; summary: { newCount: number; avgRating: number | null } }>(
+      `/api/v1/admin/feedback?${q.toString()}`,
+    );
+  },
+  adminSubscriptions: (plan?: string) => {
+    const q = plan ? `?plan=${plan}` : "";
+    return apiFetch<{
+      subscriptions: Array<{
+        id: string;
+        plan: string;
+        priceKes: number;
+        paymentStatus: string;
+        active: boolean;
+        mpesaReceipt: string | null;
+        startsAt: string;
+        expiresAt: string;
+        createdAt: string;
+        eligibility: { plan: string; label: string; unlocks: string[] };
+        customer: { phone: string; displayName: string | null; county: string | null } | null;
+      }>;
+      summary: { total: number; activeCount: number };
+    }>(`/api/v1/admin/subscriptions${q}`);
   },
   updateFeedback: (id: string, body: Record<string, unknown>) =>
     apiFetch<{ feedback: ServiceFeedback }>(`/api/v1/admin/feedback/${id}`, {

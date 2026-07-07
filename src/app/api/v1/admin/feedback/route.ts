@@ -10,11 +10,17 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const service = searchParams.get("service");
+    const category = searchParams.get("category");
+    const listingRequestsOnly = searchParams.get("listingRequests") === "true";
 
     const rows = await prisma.serviceFeedback.findMany({
       where: {
         ...(status ? { status: status as never } : undefined),
         ...(service ? { service: service as never } : undefined),
+        ...(category ? { category: category as never } : undefined),
+        ...(listingRequestsOnly
+          ? { listingId: { not: null }, category: "suggestion" }
+          : undefined),
       },
       orderBy: { createdAt: "desc" },
       take: 100,

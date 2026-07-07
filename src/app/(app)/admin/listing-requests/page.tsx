@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { MessageSquare, RefreshCw, Star } from "lucide-react";
+import { Home, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api/client";
@@ -14,28 +14,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const SERVICES = ["", "fua", "mamafua", "bnb", "rental", "general", "app"];
 const STATUSES = ["", "new", "reviewed", "resolved"];
+const SERVICES = ["", "rental", "bnb"];
 
-function Stars({ rating }: { rating: number | null }) {
-  if (rating == null) return null;
-  return (
-    <span className="inline-flex items-center gap-0.5 text-amber-600">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Star
-          key={i}
-          className={`h-3 w-3 ${i < rating ? "fill-current" : "opacity-30"}`}
-        />
-      ))}
-      <span className="ml-1 text-xs">{rating}/5</span>
-    </span>
-  );
+function requestKind(title: string | null): string {
+  if (!title) return "Request";
+  if (/tour/i.test(title)) return "3D tour";
+  if (/viewing/i.test(title)) return "Viewing";
+  if (/stay/i.test(title)) return "Stay";
+  return "Request";
 }
 
-export default function AdminFeedbackPage() {
+export default function AdminListingRequestsPage() {
   const { isAdmin } = useAuth();
   const [items, setItems] = useState<ServiceFeedback[]>([]);
-  const [summary, setSummary] = useState({ newCount: 0, avgRating: null as number | null });
   const [statusFilter, setStatusFilter] = useState("");
   const [serviceFilter, setServiceFilter] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,12 +35,11 @@ export default function AdminFeedbackPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.adminFeedback({
+      const data = await api.adminListingRequests({
         status: statusFilter || undefined,
         service: serviceFilter || undefined,
       });
       setItems(data.feedback);
-      setSummary(data.summary);
     } catch (e) {
       const err = e instanceof ApiError ? e : ApiError.network(String(e));
       toast.error(err.headline(), { description: err.message });
@@ -89,45 +80,29 @@ export default function AdminFeedbackPage() {
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <MessageSquare className="h-6 w-6 text-primary" />
+            <Home className="h-6 w-6 text-primary" />
             <div>
-              <h1 className="text-2xl font-bold">Service feedback</h1>
+              <h1 className="text-2xl font-bold">Listing requests</h1>
               <p className="text-muted-foreground">
-                Ratings, Mama Fua complaints, and suggestions from users
+                Rental viewings, BnB tours & stay inquiries from the mobile app
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-            <RefreshCw className={loading ? "animate-spin" : ""} />
-            Refresh
-          </Button>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">New</CardTitle>
-              <CardDescription>Awaiting review</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{summary.newCount}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Avg rating</CardTitle>
-              <CardDescription>All rated feedback</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{summary.avgRating ?? "—"}</p>
-            </CardContent>
-          </Card>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+              <RefreshCw className={loading ? "animate-spin" : ""} />
+              Refresh
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin">← Admin</Link>
+            </Button>
+          </div>
         </div>
 
         <Tabs value={statusFilter} onValueChange={setStatusFilter}>
           <TabsList className="flex h-auto flex-wrap">
             {STATUSES.map((s) => (
-              <TabsTrigger key={s || "all-status"} value={s} className="capitalize">
+              <TabsTrigger key={s || "all"} value={s} className="capitalize">
                 {s || "All status"}
               </TabsTrigger>
             ))}
@@ -135,10 +110,10 @@ export default function AdminFeedbackPage() {
         </Tabs>
 
         <Tabs value={serviceFilter} onValueChange={setServiceFilter}>
-          <TabsList className="flex h-auto flex-wrap">
+          <TabsList>
             {SERVICES.map((s) => (
-              <TabsTrigger key={s || "all-svc"} value={s} className="uppercase">
-                {s || "All services"}
+              <TabsTrigger key={s || "all"} value={s} className="uppercase">
+                {s || "All types"}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -148,8 +123,7 @@ export default function AdminFeedbackPage() {
           {items.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="py-12 text-center text-muted-foreground">
-                No feedback yet. Users submit via{" "}
-                <code className="text-xs">POST /api/v1/feedback</code>
+                No listing requests yet.
               </CardContent>
             </Card>
           ) : (
@@ -158,59 +132,40 @@ export default function AdminFeedbackPage() {
                 <CardHeader className="pb-2">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="uppercase">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="secondary">{requestKind(item.title)}</Badge>
+                        <Badge variant="outline" className="uppercase">
                           {item.service}
                         </Badge>
-                        <Badge variant="outline" className="capitalize">
-                          {item.category}
-                        </Badge>
-                        <Badge
-                          variant={
-                            item.status === "new"
-                              ? "default"
-                              : item.status === "resolved"
-                                ? "success"
-                                : "outline"
-                          }
-                          className="capitalize"
-                        >
-                          {item.status}
-                        </Badge>
+                        <Badge className="capitalize">{item.status}</Badge>
                       </div>
-                      {item.title && (
-                        <CardTitle className="mt-2 text-base">{item.title}</CardTitle>
-                      )}
+                      <CardTitle className="mt-2 text-base">
+                        {item.listing?.title ?? item.title ?? "Listing request"}
+                      </CardTitle>
                       <CardDescription>
-                        {item.user?.displayName ?? item.user?.phone ?? "Anonymous"} ·{" "}
+                        {item.user?.displayName ?? item.user?.phone ?? "User"} ·{" "}
+                        {item.listing?.neighborhood ?? "—"} ·{" "}
                         {new Date(item.createdAt).toLocaleString()}
                       </CardDescription>
                     </div>
-                    <Stars rating={item.rating} />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm whitespace-pre-wrap">{item.body}</p>
                   {item.listingId && (
                     <p className="text-xs text-muted-foreground">
-                      Listing: {item.listing?.title ?? item.listingId}
-                      {item.listing?.neighborhood ? ` · ${item.listing.neighborhood}` : ""}
+                      Listing ID: {item.listingId}
+                      {item.listing?.type ? ` · ${item.listing.type}` : ""}
                     </p>
                   )}
-                  {item.orderId && (
-                    <p className="text-xs text-muted-foreground">Order: {item.orderId}</p>
-                  )}
-                  {item.adminNotes && (
-                    <p className="text-sm text-muted-foreground">Admin: {item.adminNotes}</p>
-                  )}
                   <div className="flex flex-wrap gap-2">
-                    {item.status !== "reviewed" && (
+                    {item.status === "new" && (
                       <Button size="sm" variant="outline" onClick={() => markStatus(item, "reviewed")}>
                         Mark reviewed
                       </Button>
                     )}
                     {item.status !== "resolved" && (
-                      <Button size="sm" variant="outline" onClick={() => markStatus(item, "resolved")}>
+                      <Button size="sm" onClick={() => markStatus(item, "resolved")}>
                         Resolve
                       </Button>
                     )}
@@ -220,10 +175,6 @@ export default function AdminFeedbackPage() {
             ))
           )}
         </div>
-
-        <Button asChild variant="outline">
-          <Link href="/admin">← Admin</Link>
-        </Button>
       </div>
     </AppShell>
   );

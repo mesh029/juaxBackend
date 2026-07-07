@@ -99,6 +99,7 @@ export type ServiceFeedback = {
   createdAt: string;
   updatedAt: string;
   user?: { id: string; phone: string; displayName: string | null } | null;
+  listing?: { id: string; title: string; neighborhood: string; type: string } | null;
 };
 
 export type UserProfile = ApiUser & {

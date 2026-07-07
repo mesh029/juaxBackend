@@ -13,6 +13,7 @@ import {
   Sparkles,
   UserCircle,
   Users,
+  CreditCard,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,8 @@ const adminNav = [
   { href: "/admin/listings", label: "Listings", icon: Home },
   { href: "/admin/stations", label: "Mama Fua", icon: MapPin },
   { href: "/admin/requests", label: "FUA queue", icon: FlaskConical },
+  { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
+  { href: "/admin/listing-requests", label: "Listing requests", icon: Home },
   { href: "/admin/feedback", label: "Feedback", icon: Sparkles },
   { href: "/admin/users", label: "Users", icon: Users },
 ];
