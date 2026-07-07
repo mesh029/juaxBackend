@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { jsonWithCors, optionsResponse } from "@/lib/cors";
-import { resolveListingsCounty } from "@/lib/listings/resolve-county";
+import { PILOT_LISTING_COUNTIES, resolveListingsCounty } from "@/lib/listings/resolve-county";
 import { toPublicListing } from "@/lib/location-gate";
 import { publicListingSelect, toListingRow } from "@/lib/listings/prisma-mappers";
 import {
@@ -15,10 +15,18 @@ function prismaTypeFilter(type: ReturnType<typeof parseListingTypeFilter>) {
   return {};
 }
 
+async function resolveCountyFilter(requested: string | null) {
+  const normalized = (requested ?? "kisumu").trim().toLowerCase();
+  if (normalized === "pilot" || normalized === "all") {
+    return { county: { in: [...PILOT_LISTING_COUNTIES] } };
+  }
+  return { county: await resolveListingsCounty(requested) };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = parseListingTypeFilter(searchParams.get("type"));
-  const county = await resolveListingsCounty(searchParams.get("county"));
+  const countyFilter = await resolveCountyFilter(searchParams.get("county"));
 
   const { limit, offset } = parsePagination(
     searchParams.get("limit"),
@@ -28,7 +36,7 @@ export async function GET(request: Request) {
   const rows = await prisma.listing.findMany({
     where: {
       status: "published",
-      county,
+      ...countyFilter,
       ...prismaTypeFilter(type),
     },
     select: publicListingSelect,
