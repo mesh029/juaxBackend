@@ -228,7 +228,9 @@ export function CoordinatePicker({
         className="h-[280px] w-full overflow-hidden rounded-lg border border-border"
       />
       <p className="text-xs text-muted-foreground">
-        Drag pins or click the map after choosing a mode. Red = exact (gated). Amber = public map pin.
+        Drag pins or click the map after choosing a mode. Red = exact (gated). Amber = public map pin —{" "}
+        <strong>the mobile app uses amber only</strong> for map, distance, and Near me. Moving red also updates
+        amber; drag amber separately if you need a privacy offset.
       </p>
     </div>
   );

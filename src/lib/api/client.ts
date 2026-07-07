@@ -185,15 +185,27 @@ export const api = {
       `/api/v1/admin/feedback${qs ? `?${qs}` : ""}`,
     );
   },
-  adminListingRequests: (params?: { status?: string; service?: string }) => {
+  adminListingRequests: (params?: { status?: string; kind?: string }) => {
     const q = new URLSearchParams();
     if (params?.status) q.set("status", params.status);
-    if (params?.service) q.set("service", params.service);
-    q.set("listingRequests", "true");
-    return apiFetch<{ feedback: ServiceFeedback[]; summary: { newCount: number; avgRating: number | null } }>(
-      `/api/v1/admin/feedback?${q.toString()}`,
+    if (params?.kind) q.set("kind", params.kind);
+    const qs = q.toString();
+    return apiFetch<{ requests: import("./types").ListingRequestRecord[] }>(
+      `/api/v1/admin/listing-requests${qs ? `?${qs}` : ""}`,
     );
   },
+  adminListingRequest: (id: string) =>
+    apiFetch<{ request: import("./types").ListingRequestRecord }>(`/api/v1/admin/listing-requests/${id}`),
+  updateListingRequest: (id: string, body: Record<string, unknown>) =>
+    apiFetch<{ request: import("./types").ListingRequestRecord }>(`/api/v1/admin/listing-requests/${id}`, {
+      method: "PATCH",
+      body,
+    }),
+  sendListingRequestMessage: (id: string, body: { body: string }) =>
+    apiFetch<{ request: import("./types").ListingRequestRecord; message: import("./types").ListingRequestMessage }>(
+      `/api/v1/admin/listing-requests/${id}/messages`,
+      { method: "POST", body },
+    ),
   adminSubscriptions: (plan?: string) => {
     const q = plan ? `?plan=${plan}` : "";
     return apiFetch<{

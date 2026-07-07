@@ -102,6 +102,46 @@ export type ServiceFeedback = {
   listing?: { id: string; title: string; neighborhood: string; type: string } | null;
 };
 
+export type ListingRequestMessage = {
+  id: string;
+  senderRole: "user" | "admin" | "system";
+  body: string;
+  createdAt: string;
+};
+
+export type ListingRequestRecord = {
+  id: string;
+  listingId: string;
+  listingTitle: string;
+  kind: "viewing" | "tour" | "stay";
+  service: "rental" | "bnb";
+  status: string;
+  statusLabel: string;
+  stepIndex: number;
+  userNote: string | null;
+  pickupMode: "taxi" | "rider" | null;
+  pickupModeLabel: string | null;
+  riderName: string | null;
+  riderPhone: string | null;
+  scheduledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  listing?: {
+    id: string;
+    title: string;
+    type: string;
+    neighborhood: string;
+    county: string;
+  } | null;
+  user?: {
+    id: string;
+    displayName: string | null;
+    phone: string;
+    email: string | null;
+  };
+  messages?: ListingRequestMessage[];
+};
+
 export type UserProfile = ApiUser & {
   stats?: { laundryOrders: number; bnbBookings: number; feedback: number };
 };

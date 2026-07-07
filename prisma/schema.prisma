@@ -113,6 +113,32 @@ enum feedback_category {
   praise
 }
 
+enum listing_request_kind {
+  viewing
+  tour
+  stay
+}
+
+enum listing_request_status {
+  requested
+  agent_contacted
+  rider_assigned
+  rider_en_route
+  viewing_completed
+  cancelled
+}
+
+enum listing_message_sender {
+  user
+  admin
+  system
+}
+
+enum viewing_pickup_mode {
+  taxi
+  rider
+}
+
 model User {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   phoneE164   String    @unique @map("phone_e164")
@@ -136,6 +162,8 @@ model User {
   laundryStatusEvents LaundryStatusEvent[]
   laundryTrackingEvents LaundryTrackingEvent[]
   feedback            ServiceFeedback[]
+  listingRequests     ListingRequest[]
+  listingRequestMessages ListingRequestMessage[]
   ridesInterest       RidesComingSoon[]
   appSettingsUpdated  AppSetting[]
 
@@ -202,6 +230,7 @@ model Listing {
   agent       User              @relation(fields: [agentId], references: [id])
   bnbBookings BnbBooking[]
   feedback    ServiceFeedback[]
+  listingRequests ListingRequest[]
 
   @@index([type, status], map: "idx_listings_type_status")
   @@index([county], map: "idx_listings_county")
@@ -368,4 +397,42 @@ model RidesComingSoon {
   user User? @relation(fields: [userId], references: [id])
 
   @@map("rides_coming_soon")
+}
+
+model ListingRequest {
+  id          String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String                 @map("user_id") @db.Uuid
+  listingId   String                 @map("listing_id") @db.Uuid
+  kind        listing_request_kind
+  status      listing_request_status @default(requested)
+  userNote    String?                @map("user_note")
+  pickupMode  viewing_pickup_mode?   @map("pickup_mode")
+  riderName   String?                @map("rider_name")
+  riderPhone  String?                @map("rider_phone")
+  scheduledAt DateTime?              @map("scheduled_at") @db.Timestamptz(6)
+  createdAt   DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing  Listing                 @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  messages ListingRequestMessage[]
+
+  @@index([userId, createdAt(sort: Desc)], map: "idx_listing_requests_user")
+  @@index([status, createdAt(sort: Desc)], map: "idx_listing_requests_status")
+  @@map("listing_requests")
+}
+
+model ListingRequestMessage {
+  id         String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestId  String                 @map("request_id") @db.Uuid
+  senderRole listing_message_sender @map("sender_role")
+  body       String
+  createdBy  String?                @map("created_by") @db.Uuid
+  createdAt  DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  request ListingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  creator User?          @relation(fields: [createdBy], references: [id])
+
+  @@index([requestId, createdAt(sort: Asc)], map: "idx_listing_request_messages")
+  @@map("listing_request_messages")
 }

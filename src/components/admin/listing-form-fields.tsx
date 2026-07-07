@@ -207,7 +207,17 @@ export function ListingFormFields({
       <CoordinatePicker
         exact={{ lat: form.exactLat, lng: form.exactLng }}
         approx={{ lat: form.approxLat, lng: form.approxLng }}
-        onExactChange={(c) => setForm({ ...form, exactLat: c.lat, exactLng: c.lng })}
+        onExactChange={(c) =>
+          setForm((f) => ({
+            ...f,
+            exactLat: c.lat,
+            exactLng: c.lng,
+            // App map + Near me use approx only — keep in sync when exact moves.
+            // Drag the amber pin afterward if you want a privacy offset.
+            approxLat: c.lat,
+            approxLng: c.lng,
+          }))
+        }
         onApproxChange={(c) => setForm({ ...form, approxLat: c.lat, approxLng: c.lng })}
       />
 
