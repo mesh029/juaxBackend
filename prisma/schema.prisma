@@ -289,6 +289,7 @@ model LaundryOrder {
   mpesaReceipt  String?        @map("mpesa_receipt")
   adminNotes    String?        @map("admin_notes")
   assignedTo    String?        @map("assigned_to") @db.Uuid
+  customerConfirmedAt DateTime? @map("customer_confirmed_at") @db.Timestamptz(6)
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 

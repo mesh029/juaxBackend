@@ -154,6 +154,7 @@ export type LaundryOrder = {
   tracking?: LaundryTrackingEvent[];
   customer?: { phone: string; displayName: string | null };
   adminNotes?: string | null;
+  customerConfirmedAt?: string | null;
   createdAt: string;
 };
 

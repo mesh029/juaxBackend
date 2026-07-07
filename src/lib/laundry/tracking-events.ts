@@ -1,4 +1,4 @@
-import type { laundry_event_kind, laundry_actor_role } from "@prisma/client";
+import type { laundry_actor_role, laundry_event_kind, laundry_status } from "@prisma/client";
 
 export type TrackingEventDef = {
   kind: laundry_event_kind;
@@ -164,3 +164,39 @@ export const ACTOR_FOR_USER_ROLE: Record<string, laundry_actor_role> = {
   agent: "rider",
   user: "customer",
 };
+
+/** Suggested coarse status when admin logs a granular checkpoint. */
+export function statusForTrackingKind(
+  kind: laundry_event_kind,
+  pickupMode: string,
+): laundry_status | null {
+  const door: Partial<Record<laundry_event_kind, laundry_status>> = {
+    rider_assigned: "pickup_scheduled",
+    rider_en_route: "pickup_scheduled",
+    items_picked_up: "collected",
+    received_at_hub: "processing",
+    washing_started: "processing",
+    washing_complete: "ready",
+    out_for_delivery: "ready",
+    delivered_to_customer: "delivered",
+  };
+  const station: Partial<Record<laundry_event_kind, laundry_status>> = {
+    customer_dropped_at_station: "collected",
+    items_received_at_station: "collected",
+    washing_started: "processing",
+    washing_complete: "ready",
+    ready_for_pickup: "ready",
+    customer_collected: "delivered",
+  };
+  const mamafua: Partial<Record<laundry_event_kind, laundry_status>> = {
+    mamafua_dispatched: "pickup_scheduled",
+    mamafua_arrived: "collected",
+    cleaning_started: "processing",
+    cleaning_complete: "ready",
+    visit_completed: "delivered",
+  };
+
+  if (pickupMode === "station") return station[kind] ?? null;
+  if (pickupMode === "mamafua") return mamafua[kind] ?? null;
+  return door[kind] ?? null;
+}

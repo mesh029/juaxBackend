@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
-import type { laundry_actor_role, laundry_event_kind } from "@prisma/client";
-import { getTrackingEventDef } from "@/lib/laundry/tracking-events";
+import type { laundry_actor_role, laundry_event_kind, laundry_status } from "@prisma/client";
+import { getTrackingEventDef, statusForTrackingKind } from "@/lib/laundry/tracking-events";
+import { canTransition } from "@/lib/laundry/status";
 
 export async function logLaundryTrackingEvent(opts: {
   orderId: string;
@@ -20,6 +21,35 @@ export async function logLaundryTrackingEvent(opts: {
     include: {
       creator: { select: { displayName: true, phoneE164: true, role: true } },
     },
+  });
+}
+
+/** Advance coarse order status when a checkpoint maps to the next FUA step. */
+export async function syncOrderStatusFromTracking(opts: {
+  orderId: string;
+  kind: laundry_event_kind;
+  pickupMode: string;
+  currentStatus: laundry_status;
+  createdBy?: string;
+}) {
+  const next = statusForTrackingKind(opts.kind, opts.pickupMode);
+  if (!next || next === opts.currentStatus) return null;
+  if (!canTransition(opts.currentStatus, next)) return null;
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.laundryOrder.update({
+      where: { id: opts.orderId },
+      data: { status: next },
+    });
+    await tx.laundryStatusEvent.create({
+      data: {
+        orderId: opts.orderId,
+        status: next,
+        note: `Auto from checkpoint: ${opts.kind}`,
+        createdBy: opts.createdBy,
+      },
+    });
+    return updated;
   });
 }
 

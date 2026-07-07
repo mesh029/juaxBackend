@@ -8,6 +8,14 @@ import { GET as listingById } from "@/app/api/v1/listings/[id]/route";
 import { GET as nearbyListings } from "@/app/api/v1/listings/nearby/route";
 import { GET as subscriptionPlans } from "@/app/api/v1/subscriptions/plans/route";
 import { GET as catalogBootstrap } from "@/app/api/v1/catalog/bootstrap/route";
+import { POST as createSubscription } from "@/app/api/v1/subscriptions/route";
+import { GET as getActiveSubscription } from "@/app/api/v1/subscriptions/active/route";
+import { POST as confirmSubscriptionPayment } from "@/app/api/v1/subscriptions/[id]/confirm/route";
+import { POST as createBnbBooking, GET as listBnbBookings } from "@/app/api/v1/bnb/bookings/route";
+import { POST as confirmBnbBookingPayment } from "@/app/api/v1/bnb/bookings/[id]/confirm/route";
+import { POST as postFeedback } from "@/app/api/v1/feedback/route";
+import { POST as createLaundryOrder } from "@/app/api/v1/laundry/orders/route";
+import { GET as myFeedback } from "@/app/api/v1/me/feedback/route";
 import { prisma } from "@/lib/db";
 
 /** Unique per run to avoid OTP rate-limit collisions across test runs. */
@@ -341,5 +349,213 @@ describe("integration: email auth", () => {
       }),
     );
     expect(res.status).toBe(401);
+  });
+});
+
+describe("integration: subscriptions, bnb bookings, unlock", () => {
+  const EMAIL = `unlock+${Date.now()}@juax.app`;
+  const PASSWORD = "UnlockTest1!";
+  let token = "";
+  let rentalListingId = "";
+  let bnbListingId = "";
+  let subscriptionId = "";
+  let bookingId = "";
+
+  beforeAll(async () => {
+    const rentalRes = await listings(
+      jsonRequest("http://localhost/api/v1/listings?county=kisumu&type=rental"),
+    );
+    const rentals = await rentalRes.json();
+    rentalListingId = rentals[0]?.id;
+    expect(rentalListingId).toBeTruthy();
+
+    const bnbRes = await listings(
+      jsonRequest("http://localhost/api/v1/listings?county=kisumu&type=bnb"),
+    );
+    const bnbs = await bnbRes.json();
+    bnbListingId = bnbs[0]?.id;
+    expect(bnbListingId).toBeTruthy();
+
+    const { POST: emailSignup } = await import("@/app/api/v1/auth/email/signup/route");
+    const signupRes = await emailSignup(
+      jsonRequest("http://localhost/api/v1/auth/email/signup", {
+        email: EMAIL,
+        password: PASSWORD,
+        name: "Unlock Test User",
+        county: "kisumu",
+      }),
+    );
+    expect(signupRes.status).toBe(201);
+    const signupData = await signupRes.json();
+    token = signupData.token;
+  });
+
+  it("GET /subscriptions/active — no active sub yet", async () => {
+    const res = await getActiveSubscription(
+      jsonRequest("http://localhost/api/v1/subscriptions/active", undefined, token),
+    );
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.active).toBe(false);
+    expect(data.subscription).toBeNull();
+  });
+
+  it("rental detail stays locked without subscription", async () => {
+    const res = await listingById(
+      jsonRequest(`http://localhost/api/v1/listings/${rentalListingId}`, undefined, token),
+      { params: { id: rentalListingId } },
+    );
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.locationLocked).toBe(true);
+    expect(data).not.toHaveProperty("exactAddress");
+  });
+
+  it("POST /subscriptions + confirm unlocks rentals", async () => {
+    const createRes = await createSubscription(
+      jsonRequest("http://localhost/api/v1/subscriptions", { plan: "weekly" }, token),
+    );
+    const createData = await createRes.json();
+    expect(createRes.status).toBe(201);
+    expect(createData.subscription.paymentStatus).toBe("pending");
+    subscriptionId = createData.subscription.id;
+
+    const confirmRes = await confirmSubscriptionPayment(
+      jsonRequest(
+        `http://localhost/api/v1/subscriptions/${subscriptionId}/confirm`,
+        {},
+        token,
+      ),
+      { params: { id: subscriptionId } },
+    );
+    const confirmData = await confirmRes.json();
+    expect(confirmRes.status).toBe(200);
+    expect(confirmData.subscription.paymentStatus).toBe("success");
+    expect(confirmData.subscription.active).toBe(true);
+
+    const activeRes = await getActiveSubscription(
+      jsonRequest("http://localhost/api/v1/subscriptions/active", undefined, token),
+    );
+    const activeData = await activeRes.json();
+    expect(activeData.active).toBe(true);
+  });
+
+  it("rental detail unlocks after active subscription", async () => {
+    const res = await listingById(
+      jsonRequest(`http://localhost/api/v1/listings/${rentalListingId}`, undefined, token),
+      { params: { id: rentalListingId } },
+    );
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.locationLocked).toBe(false);
+    expect(data.exactAddress).toBeTruthy();
+    expect(data.hostPhone).toBeTruthy();
+  });
+
+  it("bnb detail stays locked without booking", async () => {
+    const res = await listingById(
+      jsonRequest(`http://localhost/api/v1/listings/${bnbListingId}`, undefined, token),
+      { params: { id: bnbListingId } },
+    );
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.locationLocked).toBe(true);
+  });
+
+  it("POST /bnb/bookings + confirm unlocks that bnb", async () => {
+    const checkIn = new Date();
+    checkIn.setDate(checkIn.getDate() + 3);
+    const checkOut = new Date(checkIn);
+    checkOut.setDate(checkOut.getDate() + 2);
+    const createRes = await createBnbBooking(
+      jsonRequest(
+        "http://localhost/api/v1/bnb/bookings",
+        {
+          listingId: bnbListingId,
+          checkIn: checkIn.toISOString().slice(0, 10),
+          checkOut: checkOut.toISOString().slice(0, 10),
+          guests: 2,
+        },
+        token,
+      ),
+    );
+    const createData = await createRes.json();
+    expect(createRes.status).toBe(201);
+    expect(createData.booking.paymentStatus).toBe("pending");
+    expect(createData.booking.totalKes).toBeGreaterThan(0);
+    bookingId = createData.booking.id;
+
+    const confirmRes = await confirmBnbBookingPayment(
+      jsonRequest(
+        `http://localhost/api/v1/bnb/bookings/${bookingId}/confirm`,
+        {},
+        token,
+      ),
+      { params: { id: bookingId } },
+    );
+    const confirmData = await confirmRes.json();
+    expect(confirmRes.status).toBe(200);
+    expect(confirmData.booking.confirmed).toBe(true);
+
+    const listRes = await listBnbBookings(
+      jsonRequest("http://localhost/api/v1/bnb/bookings", undefined, token),
+    );
+    const listData = await listRes.json();
+    expect(listRes.status).toBe(200);
+    expect(Array.isArray(listData)).toBe(true);
+    expect(listData.some((b: { id: string }) => b.id === bookingId)).toBe(true);
+  });
+
+  it("bnb detail unlocks after confirmed booking", async () => {
+    const res = await listingById(
+      jsonRequest(`http://localhost/api/v1/listings/${bnbListingId}`, undefined, token),
+      { params: { id: bnbListingId } },
+    );
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.locationLocked).toBe(false);
+    expect(data.exactAddress).toBeTruthy();
+  });
+
+  it("GET /me/feedback returns user FUA feedback", async () => {
+    const orderRes = await createLaundryOrder(
+      jsonRequest(
+        "http://localhost/api/v1/laundry/orders",
+        {
+          pickupMode: "door",
+          pickupAddress: "Test Rd",
+          pickupCounty: "kisumu",
+          loadKg: 3,
+          scheduleDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+          scheduleBand: "morning",
+        },
+        token,
+      ),
+    );
+    expect(orderRes.status).toBe(201);
+    const order = await orderRes.json();
+
+    const fbRes = await postFeedback(
+      jsonRequest(
+        "http://localhost/api/v1/feedback",
+        {
+          service: "fua",
+          category: "rating",
+          rating: 5,
+          body: "Integration test feedback for FUA order quality.",
+          orderId: order.id,
+        },
+        token,
+      ),
+    );
+    expect(fbRes.status).toBe(201);
+
+    const listRes = await myFeedback(
+      jsonRequest("http://localhost/api/v1/me/feedback?service=fua", undefined, token),
+    );
+    const listData = await listRes.json();
+    expect(listRes.status).toBe(200);
+    expect(Array.isArray(listData.feedback)).toBe(true);
+    expect(listData.feedback.some((f: { orderId: string }) => f.orderId === order.id)).toBe(true);
   });
 });

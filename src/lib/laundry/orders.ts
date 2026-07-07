@@ -33,7 +33,8 @@ export async function createLaundryOrder(userId: string, body: LaundryOrderBody)
     tasks,
   });
 
-  const order = await prisma.$transaction(async (tx) => {
+  const order = await prisma.$transaction(
+    async (tx) => {
     const created = await tx.laundryOrder.create({
       data: {
         userId,
@@ -80,7 +81,9 @@ export async function createLaundryOrder(userId: string, body: LaundryOrderBody)
     });
 
     return created;
-  });
+  },
+    { timeout: 20_000 },
+  );
 
   return prisma.laundryOrder.findUniqueOrThrow({
     where: { id: order.id },

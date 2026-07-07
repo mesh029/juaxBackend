@@ -158,6 +158,14 @@ export default function AdminRequestsPage() {
                       <div className="text-right">
                         <p className="font-semibold">{formatKes(order.totalKes)}</p>
                         <Badge className="mt-1 capitalize">{order.status.replace("_", " ")}</Badge>
+                        {order.status === "delivered" && (
+                          <Badge
+                            variant={order.customerConfirmedAt ? "default" : "outline"}
+                            className="mt-1 ml-1"
+                          >
+                            {order.customerConfirmedAt ? "Customer confirmed" : "Awaiting customer confirm"}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </CardHeader>

@@ -93,6 +93,56 @@ async function main() {
   if (userView.data.locationLocked !== true) throw new Error("User should still see gated listing");
   console.log("✓ User listing view — still gated (no subscription/booking)");
 
+  const bnbList = await req("/api/v1/listings?county=kisumu&type=bnb");
+  if (!bnbList.res.ok || !bnbList.data[0]?.id) throw new Error("No BnB listing for smoke test");
+  const bnbListingId = bnbList.data[0].id;
+
+  const subCreate = await req("/api/v1/subscriptions", {
+    token: userToken,
+    method: "POST",
+    body: { plan: "weekly" },
+  });
+  if (!subCreate.res.ok) throw new Error(`Subscription create: ${JSON.stringify(subCreate.data)}`);
+  const subConfirm = await req(`/api/v1/subscriptions/${subCreate.data.subscription.id}/confirm`, {
+    token: userToken,
+    method: "POST",
+    body: {},
+  });
+  if (!subConfirm.res.ok) throw new Error(`Subscription confirm: ${JSON.stringify(subConfirm.data)}`);
+  console.log("✓ User subscription active — rental unlock enabled");
+
+  const subActive = await req("/api/v1/subscriptions/active", { token: userToken });
+  if (!subActive.data.active) throw new Error("Expected active subscription");
+  console.log("✓ GET /subscriptions/active");
+
+  const bnbBook = await req("/api/v1/bnb/bookings", {
+    token: userToken,
+    method: "POST",
+    body: {
+      listingId: bnbListingId,
+      checkIn: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 10),
+      checkOut: new Date(Date.now() + 86400000 * 4).toISOString().slice(0, 10),
+      guests: 2,
+    },
+  });
+  if (!bnbBook.res.ok) throw new Error(`BnB booking: ${JSON.stringify(bnbBook.data)}`);
+  const bnbConfirm = await req(`/api/v1/bnb/bookings/${bnbBook.data.booking.id}/confirm`, {
+    token: userToken,
+    method: "POST",
+    body: {},
+  });
+  if (!bnbConfirm.res.ok) throw new Error(`BnB confirm: ${JSON.stringify(bnbConfirm.data)}`);
+  console.log(`✓ BnB booking confirmed KES ${bnbConfirm.data.booking.totalKes}`);
+
+  const bnbUnlocked = await req(`/api/v1/listings/${bnbListingId}`, { token: userToken });
+  if (bnbUnlocked.data.locationLocked !== false) throw new Error("BnB should unlock after booking");
+  if (!bnbUnlocked.data.exactAddress) throw new Error("Expected exactAddress on unlocked BnB");
+  console.log("✓ BnB listing unlocked after paid booking");
+
+  const myFeedback = await req("/api/v1/me/feedback?service=fua", { token: userToken });
+  if (!myFeedback.res.ok) throw new Error(`GET /me/feedback: ${JSON.stringify(myFeedback.data)}`);
+  console.log(`✓ GET /me/feedback (${myFeedback.data.feedback?.length ?? 0} items)`);
+
   const fua = await req("/api/v1/laundry/orders", {
     token: userToken,
     method: "POST",

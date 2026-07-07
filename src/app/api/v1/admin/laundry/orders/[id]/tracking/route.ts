@@ -5,7 +5,8 @@ import { requireRole } from "@/lib/auth/require-auth";
 import { jsonWithCors, optionsResponse } from "@/lib/cors";
 import { handleRouteError } from "@/lib/api/route-helpers";
 import { getLaundryOrderById } from "@/lib/laundry/orders";
-import { logLaundryTrackingEvent, toTrackingEventDto } from "@/lib/laundry/tracking";
+import { toLaundryOrderDto } from "@/lib/laundry/order-dto";
+import { logLaundryTrackingEvent, syncOrderStatusFromTracking, toTrackingEventDto } from "@/lib/laundry/tracking";
 import { ACTOR_FOR_USER_ROLE } from "@/lib/laundry/tracking-events";
 
 const bodySchema = z.object({
@@ -57,9 +58,21 @@ export async function POST(request: Request, { params }: Params) {
       note: body.note,
     });
 
-    return jsonWithCors({ ok: true, event: toTrackingEventDto(event) }, request, {
-      status: 201,
+    await syncOrderStatusFromTracking({
+      orderId: params.id,
+      kind: body.kind,
+      pickupMode: order.pickupMode,
+      currentStatus: order.status,
+      createdBy: user.id,
     });
+
+    const refreshed = await getLaundryOrderById(params.id);
+
+    return jsonWithCors(
+      { ok: true, event: toTrackingEventDto(event), order: refreshed ? toLaundryOrderDto(refreshed, { includeUser: true }) : null },
+      request,
+      { status: 201 },
+    );
   } catch (err) {
     return handleRouteError(request, err);
   }

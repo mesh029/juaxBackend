@@ -24,6 +24,7 @@ type OrderWithStation = {
   status: laundry_status;
   paymentStatus: string;
   adminNotes: string | null;
+  customerConfirmedAt?: Date | null;
   createdAt: Date;
   station?: { name: string; code: string; address: string } | null;
   user?: { phoneE164: string; displayName: string | null } | null;
@@ -89,6 +90,7 @@ export function toLaundryOrderDto(order: OrderWithStation, opts?: { includeUser?
     status: order.status,
     paymentStatus: order.paymentStatus,
     adminNotes: order.adminNotes,
+    customerConfirmedAt: order.customerConfirmedAt?.toISOString() ?? null,
     steps: [...steps],
     currentStep: Math.max(0, laundryStepIndex(order.status)),
     etaMinutes: order.status === "delivered" ? 0 : isMamafua ? 90 : 35,
