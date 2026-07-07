@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { resolveListingsCounty } from "@/lib/listings/resolve-county";
 import { isKisumuOnlyListings } from "@/lib/app-settings";
 import { toPublicListing } from "@/lib/location-gate";
 import { publicListingSelect, toListingRow } from "@/lib/listings/prisma-mappers";
@@ -15,7 +16,7 @@ import type { AppCatalogBootstrap, PublicListing } from "@/lib/api/types";
  */
 export async function buildAppCatalog(countyInput: string): Promise<AppCatalogBootstrap> {
   const kisumuOnly = await isKisumuOnlyListings();
-  const county = kisumuOnly ? "kisumu" : countyInput.toLowerCase();
+  const county = await resolveListingsCounty(countyInput);
 
   const [rentalRows, bnbRows, stations] = await Promise.all([
     prisma.listing.findMany({

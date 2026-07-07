@@ -54,10 +54,55 @@ export async function forwardGeocode(query: string): Promise<GeocodeResult | nul
 export function getCurrentPosition(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      reject(new Error("Geolocation not supported"));
+      reject(new Error("Geolocation not supported in this browser"));
       return;
     }
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
+
+    let settled = false;
+    let watchId: number | null = null;
+    let best: GeolocationPosition | null = null;
+
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
+      fn();
+    };
+
+    const tryResolve = (pos: GeolocationPosition) => {
+      const { accuracy } = pos.coords;
+      if (accuracy <= 80) {
+        window.clearTimeout(deadline);
+        finish(() => resolve(pos));
+        return;
+      }
+      if (!best || accuracy < best.coords.accuracy) {
+        best = pos;
+      }
+    };
+
+    const deadline = window.setTimeout(() => {
+      if (best) {
+        finish(() => resolve(best!));
+        return;
+      }
+      finish(() =>
+        reject(new Error("Location timeout — enable GPS, allow permission, then try again")),
+      );
+    }, 18000);
+
+    const onError = (err: GeolocationPositionError) => {
+      window.clearTimeout(deadline);
+      finish(() => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve(pos),
+          () => reject(new Error(err.message || "Could not get your location")),
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+        );
+      });
+    };
+
+    watchId = navigator.geolocation.watchPosition(tryResolve, onError, {
       enableHighAccuracy: true,
       maximumAge: 0,
       timeout: 20000,

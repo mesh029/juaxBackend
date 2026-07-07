@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { jsonWithCors, optionsResponse } from "@/lib/cors";
-import { isKisumuOnlyListings } from "@/lib/app-settings";
+import { resolveListingsCounty } from "@/lib/listings/resolve-county";
 import { toPublicListing } from "@/lib/location-gate";
 import { publicListingSelect, toListingRow } from "@/lib/listings/prisma-mappers";
 import {
@@ -18,8 +18,7 @@ function prismaTypeFilter(type: ReturnType<typeof parseListingTypeFilter>) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = parseListingTypeFilter(searchParams.get("type"));
-  let county = (searchParams.get("county") ?? "kisumu").toLowerCase();
-  if (await isKisumuOnlyListings()) county = "kisumu";
+  const county = await resolveListingsCounty(searchParams.get("county"));
 
   const { limit, offset } = parsePagination(
     searchParams.get("limit"),

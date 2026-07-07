@@ -1,7 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { jsonWithCors, optionsResponse } from "@/lib/cors";
-import { getDefaultSearchRadiusKm, isKisumuOnlyListings } from "@/lib/app-settings";
+import { getDefaultSearchRadiusKm } from "@/lib/app-settings";
+import { resolveListingsCounty } from "@/lib/listings/resolve-county";
 import { toPublicListing, type ListingPublicRow } from "@/lib/location-gate";
 import {
   parseListingTypeFilter,
@@ -51,8 +52,7 @@ export async function GET(request: Request) {
   }
 
   const type = parseListingTypeFilter(searchParams.get("type"));
-  let county = (searchParams.get("county") ?? "kisumu").toLowerCase();
-  if (await isKisumuOnlyListings()) county = "kisumu";
+  const county = await resolveListingsCounty(searchParams.get("county"));
 
   const radiusParam = searchParams.get("radiusKm");
   const radiusKm = radiusParam

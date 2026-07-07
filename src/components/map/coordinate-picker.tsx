@@ -33,6 +33,7 @@ export function CoordinatePicker({
   const exactMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const approxMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const mapReadyRef = useRef(false);
+  const pendingFlyRef = useRef<Coords | null>(null);
   const onExactRef = useRef(onExactChange);
   const onApproxRef = useRef(onApproxChange);
   const [pickMode, setPickMode] = useState<PickMode>(null);
@@ -46,7 +47,11 @@ export function CoordinatePicker({
 
   const flyTo = useCallback((c: Coords) => {
     const map = mapRef.current;
-    if (!map || !mapReadyRef.current) return;
+    if (!map || !mapReadyRef.current) {
+      pendingFlyRef.current = c;
+      return;
+    }
+    pendingFlyRef.current = null;
     map.flyTo({ center: [c.lng, c.lat], zoom: 17, essential: true });
   }, []);
 
@@ -101,6 +106,7 @@ export function CoordinatePicker({
 
     map.on("load", () => {
       mapReadyRef.current = true;
+      if (pendingFlyRef.current) flyTo(pendingFlyRef.current);
     });
 
     map.on("click", (e) => {
@@ -138,16 +144,23 @@ export function CoordinatePicker({
     try {
       const pos = await getCurrentPosition();
       const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      const accuracy = pos.coords.accuracy;
 
-      if (!isInKenya(c.lat, c.lng)) {
+      if (accuracy > 3000) {
         setGeoError(
-          `Location looks outside Kenya (${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}). Browser may have used network estimate — try again outdoors or set pin manually.`,
+          `Low GPS accuracy (±${Math.round(accuracy)}m) — map may show a rough network estimate. Move outdoors or drag the pin to correct.`,
+        );
+      } else if (!isInKenya(c.lat, c.lng)) {
+        setGeoError(
+          `Location looks outside Kenya (${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}). Drag the pin if this is wrong.`,
         );
       } else {
-        setGeoHint(`GPS: ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)} (±${Math.round(pos.coords.accuracy)}m)`);
+        setGeoHint(`GPS: ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)} (±${Math.round(accuracy)}m)`);
       }
 
       placeExact(c, true);
+      approxMarkerRef.current?.setLngLat([c.lng, c.lat]);
+      onApproxRef.current(c);
     } catch (err) {
       setGeoError(err instanceof Error ? err.message : "Could not get your location");
     } finally {
@@ -195,6 +208,9 @@ export function CoordinatePicker({
           {geoLoading ? "Getting GPS…" : "Use my location (exact)"}
         </Button>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Allow location when prompted. We wait for GPS (not network estimate) — may take a few seconds outdoors.
+      </p>
       <div className="flex flex-wrap gap-2 text-xs">
         <Badge variant="outline" className="gap-1">
           <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
