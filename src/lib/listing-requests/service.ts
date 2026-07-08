@@ -68,7 +68,12 @@ export async function createListingRequest(input: {
 
 export async function listUserListingRequests(userId: string) {
   return prisma.listingRequest.findMany({
-    where: { userId },
+    where: {
+      userId,
+      listing: {
+        status: { not: "archived" },
+      },
+    },
     orderBy: { createdAt: "desc" },
     include: {
       listing: { select: listingSelect },
@@ -79,7 +84,13 @@ export async function listUserListingRequests(userId: string) {
 
 export async function getUserListingRequest(userId: string, id: string) {
   return prisma.listingRequest.findFirst({
-    where: { id, userId },
+    where: {
+      id,
+      userId,
+      listing: {
+        status: { not: "archived" },
+      },
+    },
     include: {
       listing: { select: listingSelect },
       messages: { orderBy: { createdAt: "asc" } },

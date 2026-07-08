@@ -33,7 +33,12 @@ function nightsBetween(checkIn: Date, checkOut: Date): number {
 
 export async function getUserBnbBookings(userId: string) {
   return prisma.bnbBooking.findMany({
-    where: { userId },
+    where: {
+      userId,
+      listing: {
+        status: { not: "archived" },
+      },
+    },
     orderBy: { createdAt: "desc" },
     select: bookingSelect,
   });
@@ -41,7 +46,13 @@ export async function getUserBnbBookings(userId: string) {
 
 export async function getUserBnbBooking(userId: string, bookingId: string) {
   return prisma.bnbBooking.findFirst({
-    where: { id: bookingId, userId },
+    where: {
+      id: bookingId,
+      userId,
+      listing: {
+        status: { not: "archived" },
+      },
+    },
     select: bookingSelect,
   });
 }

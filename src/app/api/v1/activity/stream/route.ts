@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const TICK_MS = 5000;
+const HEARTBEAT_MS = 15000;
 
 async function resolveToken(request: Request): Promise<string | null> {
   const fromQuery = new URL(request.url).searchParams.get("token");
@@ -37,6 +38,7 @@ export async function GET(request: Request) {
   let lastDigest = "";
   let closed = false;
   let timer: ReturnType<typeof setInterval> | null = null;
+  let heartbeat: ReturnType<typeof setInterval> | null = null;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -62,10 +64,19 @@ export async function GET(request: Request) {
       timer = setInterval(() => {
         void publish();
       }, TICK_MS);
+      heartbeat = setInterval(() => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(`event: ping\ndata: {"type":"ping","at":"${new Date().toISOString()}"}\n\n`));
+        } catch {
+          // stream may already be closed
+        }
+      }, HEARTBEAT_MS);
 
       request.signal.addEventListener("abort", () => {
         closed = true;
         if (timer) clearInterval(timer);
+        if (heartbeat) clearInterval(heartbeat);
         try {
           controller.close();
         } catch {
@@ -76,6 +87,7 @@ export async function GET(request: Request) {
     cancel() {
       closed = true;
       if (timer) clearInterval(timer);
+      if (heartbeat) clearInterval(heartbeat);
     },
   });
 

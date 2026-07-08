@@ -59,6 +59,25 @@ export async function DELETE(request: Request, { params }: Params) {
       });
     }
 
+    const activeBookings = await prisma.bnbBooking.count({
+      where: {
+        listingId: params.id,
+        status: { in: ["pending_payment", "confirmed", "completed"] },
+      },
+    });
+    if (activeBookings > 0) {
+      return jsonWithCors(
+        {
+          error: "listing_has_bookings",
+          message:
+            "This listing has booking history and cannot be permanently deleted. Archive it instead.",
+          bookingCount: activeBookings,
+        },
+        request,
+        { status: 409 },
+      );
+    }
+
     await prisma.listing.delete({ where: { id: params.id } });
     return jsonWithCors({ ok: true, id: params.id }, request);
   } catch (err) {
