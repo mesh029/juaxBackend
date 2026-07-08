@@ -14,7 +14,10 @@
     "walkthrough": "node scripts/api-walkthrough.mjs",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:pending": "node scripts/apply-pending-migrations.mjs",
+    "geo:import-counties": "node scripts/import-kenya-counties.mjs",
+    "geo:import-counties:all": "node scripts/import-kenya-counties.mjs --all"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

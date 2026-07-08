@@ -50,6 +50,7 @@ async function main() {
       "database/migrations/006_viewing_pickup_mode.sql",
       "database/migrations/007_listing_image_urls.sql",
       "database/migrations/008_laundry_customer_confirmed.sql",
+      "database/migrations/009_postgis_admin_areas.sql",
     ];
 
     for (const file of migrationFiles) {
