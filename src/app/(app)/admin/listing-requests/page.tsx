@@ -80,6 +80,15 @@ export default function AdminListingRequestsPage() {
   }, [isAdmin, load]);
 
   useEffect(() => {
+    if (!isAdmin) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void load();
+    }, 8000);
+    return () => clearInterval(timer);
+  }, [isAdmin, load]);
+
+  useEffect(() => {
     if (selected) {
       setRiderName(selected.riderName ?? "");
       setRiderPhone(selected.riderPhone ?? "");

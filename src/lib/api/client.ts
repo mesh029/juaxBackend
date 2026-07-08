@@ -265,6 +265,10 @@ export const api = {
       method: "PATCH",
       body,
     }),
+  deleteListing: (id: string) =>
+    apiFetch<{ ok: boolean; id: string }>(`/api/v1/admin/listings/${id}`, {
+      method: "DELETE",
+    }),
   publishListing: (id: string) =>
     apiFetch(`/api/v1/admin/listings/${id}/publish`, { method: "POST", body: {} }),
   archiveListing: (id: string) =>

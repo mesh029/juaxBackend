@@ -49,6 +49,23 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 }
 
+export async function DELETE(request: Request, { params }: Params) {
+  try {
+    await requireRole(request, ["admin"]);
+    const existing = await prisma.listing.findUnique({ where: { id: params.id } });
+    if (!existing) {
+      return jsonWithCors({ error: "not_found", message: "Listing not found" }, request, {
+        status: 404,
+      });
+    }
+
+    await prisma.listing.delete({ where: { id: params.id } });
+    return jsonWithCors({ ok: true, id: params.id }, request);
+  } catch (err) {
+    return handleRouteError(request, err);
+  }
+}
+
 export function OPTIONS(request: Request) {
   return optionsResponse(request);
 }

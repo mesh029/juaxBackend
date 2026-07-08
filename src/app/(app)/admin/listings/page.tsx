@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api/client";
@@ -163,6 +163,20 @@ function AdminListingsContent() {
     }
   }
 
+  async function handleDelete(id: string, title: string) {
+    const confirmed = window.confirm(
+      `Delete listing "${title}" permanently?\n\nThis cannot be undone.`,
+    );
+    if (!confirmed) return;
+    try {
+      await api.deleteListing(id);
+      toast.success("Listing deleted");
+      await load();
+    } catch (e) {
+      handleApiError(e);
+    }
+  }
+
   if (!canManage) {
     return (
       <AppShell>
@@ -274,6 +288,16 @@ function AdminListingsContent() {
                           {l.status !== "archived" && (
                             <Button size="sm" variant="ghost" onClick={() => handleArchive(l.id)}>
                               Archive
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDelete(l.id, l.title)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Delete
                             </Button>
                           )}
                         </TableCell>
