@@ -16,6 +16,7 @@ const PENDING = [
   "database/migrations/006_viewing_pickup_mode.sql",
   "database/migrations/009_postgis_admin_areas.sql",
   "database/migrations/010_backfill_listing_requests_from_feedback.sql",
+  "database/migrations/011_nyamira_listings_cleanup.sql",
 ];
 
 const url = process.env.DATABASE_URL;

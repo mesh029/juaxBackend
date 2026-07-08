@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 5080",
+    "dev": "node server.mjs dev",
     "build": "next build",
-    "start": "next start --port 5080",
+    "start": "node server.mjs start",
     "lint": "next lint",
     "migrate": "node scripts/migrate.mjs",
     "seed": "node scripts/seed.mjs",
@@ -48,6 +48,7 @@
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^3.4.19",
     "tailwindcss-animate": "^1.0.7",
+    "ws": "^8.21.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
