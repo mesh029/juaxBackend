@@ -39,7 +39,23 @@ async function main() {
     await client.query("SELECT 1");
     console.log("Connected to Aiven Postgres\n");
 
-    await runFile("database/migrations/001_initial_schema.sql");
+    const migrationFiles = [
+      "database/migrations/001_initial_schema.sql",
+      "database/migrations/002_mamafua_service.sql",
+      "database/migrations/003_laundry_tracking.sql",
+      "database/migrations/004_profiles_feedback.sql",
+      "database/migrations/005_listing_images.sql",
+      "database/migrations/005_listing_requests.sql",
+      "database/migrations/006_password_auth.sql",
+      "database/migrations/006_viewing_pickup_mode.sql",
+      "database/migrations/007_listing_image_urls.sql",
+      "database/migrations/008_laundry_customer_confirmed.sql",
+    ];
+
+    for (const file of migrationFiles) {
+      await runFile(file);
+    }
+
     await runFile("database/seed/001_pilot_seed.sql");
 
     const { rows } = await client.query(
